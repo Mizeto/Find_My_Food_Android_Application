@@ -165,36 +165,48 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     List<NavigationDestination> currentDestinations = [
       NavigationDestination(
         icon: const Icon(Icons.restaurant_menu_outlined),
-        selectedIcon: Icon(Icons.restaurant_menu, color: AppTheme.primaryOrange),
+        selectedIcon: Icon(
+          Icons.restaurant_menu,
+          color: AppTheme.primaryOrange,
+        ),
         label: 'เมนู',
       ),
     ];
 
     if (isAuthenticated) {
       currentScreens.add(const ScanFoodScreen());
-      currentDestinations.add(NavigationDestination(
-        icon: const Icon(Icons.document_scanner_outlined),
-        selectedIcon: Icon(Icons.document_scanner, color: AppTheme.primaryOrange),
-        label: 'สแกน',
-      ));
+      currentDestinations.add(
+        NavigationDestination(
+          icon: const Icon(Icons.document_scanner_outlined),
+          selectedIcon: Icon(
+            Icons.document_scanner,
+            color: AppTheme.primaryOrange,
+          ),
+          label: 'สแกน',
+        ),
+      );
     }
 
     // Add Shopping List and Profile (Always show for now? Or hide Shopping List too?)
     // Assuming only Scan and Add were requested to be hidden.
     // Keeping Shopping List and Profile for now as user only specified Scan/Add.
     currentScreens.add(const ShoppingListScreen());
-    currentDestinations.add(NavigationDestination(
-      icon: const Icon(Icons.shopping_cart_outlined),
-      selectedIcon: Icon(Icons.shopping_cart, color: AppTheme.primaryGreen),
-      label: 'จ่ายตลาด',
-    ));
+    currentDestinations.add(
+      NavigationDestination(
+        icon: const Icon(Icons.shopping_cart_outlined),
+        selectedIcon: Icon(Icons.shopping_cart, color: AppTheme.primaryGreen),
+        label: 'จ่ายตลาด',
+      ),
+    );
 
     currentScreens.add(const ProfileScreen());
-    currentDestinations.add(NavigationDestination(
-      icon: const Icon(Icons.person_outline),
-      selectedIcon: Icon(Icons.person, color: AppTheme.primaryOrange),
-      label: 'โปรไฟล์',
-    ));
+    currentDestinations.add(
+      NavigationDestination(
+        icon: const Icon(Icons.person_outline),
+        selectedIcon: Icon(Icons.person, color: AppTheme.primaryOrange),
+        label: 'โปรไฟล์',
+      ),
+    );
 
     // Ensure index is valid
     if (_currentIndex >= currentScreens.length) {
