@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../data/models/recipe_model.dart';
 import '../../../core/theme/app_theme.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../data/repositories/recipe_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class RecipeDetailScreen extends StatefulWidget {
@@ -18,6 +20,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
   bool _isFavorite = false;
   late AnimationController _favoriteController;
   late Animation<double> _favoriteAnimation;
+  Recipe? _fullRecipe;
+  bool _isLoadingDetails = true;
 
   @override
   void initState() {
@@ -30,6 +34,31 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
       CurvedAnimation(parent: _favoriteController, curve: Curves.elasticOut),
     );
     _loadFavorite();
+    _loadFullRecipe();
+  }
+
+  Future<void> _loadFullRecipe() async {
+    try {
+      // Assuming RecipeRepository is provided via RepositoryProvider in main.dart
+      // If not accessible easier, we might need to look it up.
+      // Based on main.dart, it uses RepositoryProvider.
+      final repository = context.read<RecipeRepository>(); 
+      final fullRecipe = await repository.getRecipeDetail(widget.recipe.id);
+      if (mounted) {
+        setState(() {
+          _fullRecipe = fullRecipe;
+          _isLoadingDetails = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingDetails = false;
+        });
+        // Optional: show error snackbar, but we fallback to widget.recipe anyway
+        print('Error loading full recipe: $e');
+      }
+    }
   }
 
   Future<void> _loadFavorite() async {
@@ -61,17 +90,14 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
   }
 
   @override
-  void dispose() {
-    _favoriteController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    // Use full recipe if available, otherwise fallback to widget.recipe
+    final displayRecipe = _fullRecipe ?? widget.recipe;
+
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          // SliverAppBar with Hero Animation
+          // ... (AppBar uses displayRecipe or widget.recipe - mostly specific fields that won't change like image/title)
           SliverAppBar(
             expandedHeight: 300,
             pinned: true,
@@ -89,7 +115,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
               ),
             ),
             actions: [
-              // Favorite Button with Animation
+               // ... existing actions
+               // Favorite Button with Animation
               Container(
                 margin: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
@@ -130,12 +157,12 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                 StretchMode.blurBackground,
               ],
               background: Hero(
-                tag: 'recipe-image-${widget.recipe.id}',
+                tag: 'recipe-image-${displayRecipe.id}',
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
                     Image.network(
-                      widget.recipe.imageUrl,
+                      displayRecipe.imageUrl,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) => Container(
                         decoration: const BoxDecoration(
@@ -171,7 +198,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            widget.recipe.title,
+                            displayRecipe.title,
                             style: const TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
@@ -190,7 +217,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                             children: [
                               _buildInfoChip(
                                 Icons.access_time,
-                                '${widget.recipe.prepTime} นาที',
+                                '${displayRecipe.prepTime} นาที',
                                 AppTheme.primaryOrange,
                               ),
                               const SizedBox(width: 12),
@@ -223,7 +250,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                     title: 'คำอธิบาย',
                     color: AppTheme.primaryOrange,
                     child: Text(
-                      widget.recipe.description,
+                      displayRecipe.description,
                       style: TextStyle(
                         fontSize: 16,
                         color: Colors.grey[700],
@@ -239,14 +266,16 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                     icon: Icons.restaurant_menu,
                     title: 'วิธีทำ 👨‍🍳',
                     color: AppTheme.primaryGreen,
-                    child: Text(
-                      widget.recipe.cookingMethod,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[700],
-                        height: 1.8,
-                      ),
-                    ),
+                    child: _isLoadingDetails
+                      ? const Center(child: CircularProgressIndicator())
+                      : Text(
+                          displayRecipe.cookingMethod,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[700],
+                            height: 1.8,
+                          ),
+                        ),
                   ),
 
                   const SizedBox(height: 20),

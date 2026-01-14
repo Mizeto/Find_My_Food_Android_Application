@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_cubit.dart';
 import '../../auth/cubit/auth_cubit.dart';
+import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -228,7 +229,7 @@ class _ProfileMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final menuItems = [
-      _MenuItem(Icons.person_outline, 'โพรไฟล์'),
+      _MenuItem(Icons.person_outline, 'โปรไฟล์'),
       _MenuItem(Icons.notifications_outlined, 'เพื่อนของคุณ'),
       _MenuItem(Icons.bar_chart, 'สถิติของสูตร'),
       _MenuItem(Icons.access_time, 'สูตรอาหารที่เพิ่งดู'),
@@ -247,13 +248,22 @@ class _ProfileMenu extends StatelessWidget {
               title: item.title,
               isDarkMode: isDarkMode,
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('เปิด ${item.title}'),
-                    duration: const Duration(seconds: 1),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
+                if (item.title == 'โปรไฟล์') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const EditProfileScreen(),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('เปิด ${item.title}'),
+                      duration: const Duration(seconds: 1),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
               },
             )),
       ],

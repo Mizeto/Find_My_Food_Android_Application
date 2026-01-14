@@ -56,8 +56,8 @@ class MyApp extends StatelessWidget {
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
             themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
-            // home: const AuthWrapper(), // Bypassed Login
-            home: const MainNavigationScreen(),
+            home: const AuthWrapper(),
+            // home: const MainNavigationScreen(), // Bypassed Login
           );
         },
       ),

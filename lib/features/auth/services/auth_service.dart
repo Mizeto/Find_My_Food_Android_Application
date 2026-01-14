@@ -4,52 +4,247 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 
 class AuthService {
-  // ⚠️ NOTE: Use 'http://10.0.2.2:8000' for Android Emulator
-  // Use 'http://127.0.0.1:8000' for iOS Simulator or Windows Desktop
-  // If testing on real device, use your PC's LAN IP (e.g. 192.168.1.x:8000)
-  static const String baseUrl = 'http://10.0.2.2:8000'; 
+  static const String baseUrl = 'https://find-my-food-api.onrender.com';
+  static const String _tokenKey = 'auth_token';
 
-  Future<Map<String, dynamic>> login(String email, String password) async {
+  // Save token to SharedPreferences
+  Future<void> _saveToken(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_tokenKey, token);
+  }
+
+  // Get token from SharedPreferences
+  Future<String?> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_tokenKey);
+  }
+
+  // Clear token (for logout)
+  Future<void> clearToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_tokenKey);
+  }
+
+  // Login: POST /auth/login (x-www-form-urlencoded)
+  Future<Map<String, dynamic>> login(String username, String password) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email,
+        Uri.parse('$baseUrl/auth/login'),
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'accept': 'application/json',
+        },
+        body: {
+          'grant_type': 'password',
+          'username': username,
           'password': password,
-        }),
+          'scope': '',
+          'client_id': 'string',
+          'client_secret': '********',
+        },
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return data['user']; // Returns user object
+        print('Login Success: $data');
+        
+        // Save the token
+        if (data['access_token'] != null) {
+          await _saveToken(data['access_token']);
+        }
+        
+        // Extract user data from the 'data' field
+        final userData = data['data'] as Map<String, dynamic>? ?? {};
+        
+        return {
+          'username': userData['username'] ?? username,
+          'email': userData['email'] ?? 'user@example.com',
+          'first_name': userData['first_name'],
+          'last_name': userData['last_name'],
+          'gender': userData['gender'],
+          'age': userData['age'],
+          'profile_image': userData['image_url'],
+          'token': data['access_token'],
+        };
       } else {
-        final error = jsonDecode(response.body);
-        throw Exception(error['detail'] ?? 'Login failed');
+        print('Login Failed: ${response.statusCode} ${response.body}');
+        try {
+          final error = jsonDecode(response.body);
+          throw Exception(error['detail'] ?? 'Login failed');
+        } catch (_) {
+          throw Exception('Login failed: ${response.statusCode}');
+        }
       }
     } catch (e) {
       throw Exception('Connection error: $e');
     }
   }
 
-  Future<Map<String, dynamic>> register(String username, String email, String password) async {
+  // Register: POST /users/createUser (application/json)
+  Future<bool> register({
+    required String username,
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+    required String gender,
+    required int age,
+  }) async {
+    try {
+      final body = {
+        'email': email,
+        'password': password,
+        'username': username,
+        'first_name': firstName,
+        'last_name': lastName,
+        'gender': gender,
+        'age': age,
+      };
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/users/createUser'),
+        headers: {
+          'Content-Type': 'application/json',
+          'accept': 'application/json',
+        },
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print('Register Success: ${response.body}');
+        return true;
+      } else {
+        print('Register Failed: ${response.statusCode} ${response.body}');
+        try {
+          final error = jsonDecode(response.body);
+          throw Exception(error['detail'] ?? 'Registration failed');
+        } catch (_) {
+          throw Exception('Registration failed: ${response.statusCode}');
+        }
+      }
+    } catch (e) {
+      throw Exception('Connection error: $e');
+    }
+  }
+
+  // Google Register: POST /auth/google/register
+  Future<Map<String, dynamic>> googleRegister({
+    required String tempToken,
+    required String username,
+    required String gender,
+    required int age,
+  }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/register'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse('$baseUrl/auth/google/register'),
+        headers: {
+          'Content-Type': 'application/json',
+          'accept': 'application/json',
+        },
         body: jsonEncode({
+          'temp_token': tempToken,
           'username': username,
-          'email': email,
-          'password': password,
+          'gender': gender,
+          'age': age,
         }),
       );
 
-      if (response.statusCode == 201) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
-        return data['user'];
+        print('Google Register Success: $data');
+        
+        // Save the token if present
+        if (data['access_token'] != null) {
+          await _saveToken(data['access_token']);
+        }
+        
+        return data;
       } else {
-        final error = jsonDecode(response.body);
-        throw Exception(error['detail'] ?? 'Registration failed');
+        print('Google Register Failed: ${response.statusCode} ${response.body}');
+        try {
+          final error = jsonDecode(response.body);
+          throw Exception(error['detail'] ?? 'Google registration failed');
+        } catch (_) {
+          throw Exception('Google registration failed: ${response.statusCode}');
+        }
+      }
+    } catch (e) {
+      throw Exception('Connection error: $e');
+    }
+  }
+
+  // Upload User Image: POST /users/uploadUserImage (multipart/form-data)
+  Future<String> uploadUserImage(String imagePath) async {
+    try {
+      // Get the stored token
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        throw Exception('Not authenticated. Please login again.');
+      }
+
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/users/uploadUserImage'),
+      );
+      request.headers['accept'] = 'application/json';
+      request.headers['Authorization'] = 'Bearer $token';
+      request.files.add(await http.MultipartFile.fromPath('file', imagePath));
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        print('Upload Image Success: $data');
+        // Return the image URL from the response
+        return data['image_url'] ?? data['url'] ?? data['data']?['image_url'] ?? '';
+      } else {
+        print('Upload Image Failed: ${response.statusCode} ${response.body}');
+        try {
+          final error = jsonDecode(response.body);
+          throw Exception(error['message'] ?? error['detail'] ?? 'Image upload failed');
+        } catch (_) {
+          throw Exception('Image upload failed: ${response.statusCode}');
+        }
+      }
+    } catch (e) {
+      throw Exception('Connection error: $e');
+    }
+  }
+
+  // Google Login with ID Token: POST /auth/google/register with id_token
+  // Returns either access_token (existing user) or temp_token (new user)
+  Future<Map<String, dynamic>> googleLoginWithIdToken(String idToken) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/google/register'),
+        headers: {
+          'Content-Type': 'application/json',
+          'accept': 'application/json',
+        },
+        body: jsonEncode({
+          'id_token': idToken,
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        print('Google Login Success: $data');
+        
+        // Save the token if present (existing user)
+        if (data['access_token'] != null) {
+          await _saveToken(data['access_token']);
+        }
+        
+        return data;
+      } else {
+        print('Google Login Failed: ${response.statusCode} ${response.body}');
+        try {
+          final error = jsonDecode(response.body);
+          throw Exception(error['detail'] ?? error['message'] ?? 'Google login failed');
+        } catch (_) {
+          throw Exception('Google login failed: ${response.statusCode}');
+        }
       }
     } catch (e) {
       throw Exception('Connection error: $e');

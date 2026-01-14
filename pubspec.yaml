@@ -38,9 +38,10 @@ dependencies:
   equatable: ^2.0.7
   http: ^1.6.0
   shared_preferences: ^2.2.2
-  image_picker: ^1.0.7
+  image_picker: ^1.2.1
   google_generative_ai: ^0.2.0
   flutter_markdown: ^0.6.19
+  webview_flutter: ^4.13.1
 
   # Authentication (Custom Backend)
   # firebase_* dependencies removed
