@@ -16,6 +16,7 @@ import 'features/auth/cubit/auth_cubit.dart';
 import 'features/home/screens/home_screen.dart';
 import 'features/home/screens/shopping_list_screen.dart';
 import 'features/auth/screens/login_screen.dart';
+import 'features/auth/screens/google_register_screen.dart';
 import 'features/profile/screens/profile_screen.dart';
 import 'features/scan_food/screens/scan_food_screen.dart';
 
@@ -79,6 +80,10 @@ class AuthWrapper extends StatelessWidget {
 
         if (state is AuthAuthenticated) {
           return const MainNavigationScreen();
+        }
+
+        if (state is AuthGoogleRegistrationRequired) {
+          return GoogleRegisterScreen(tempToken: state.tempToken);
         }
 
         return const LoginScreen();

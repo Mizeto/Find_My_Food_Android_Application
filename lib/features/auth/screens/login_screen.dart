@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../cubit/auth_cubit.dart';
 import 'register_screen.dart';
-import 'google_register_screen.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -12,6 +12,7 @@ class LoginScreen extends StatelessWidget {
     return Scaffold(
       body: BlocListener<AuthCubit, AuthState>(
         listener: (context, state) {
+          print('LoginScreen listener received state: $state'); // Debug print
           if (state is AuthError) {
             showDialog(
               context: context,
@@ -32,16 +33,6 @@ class LoginScreen extends StatelessWidget {
                 ],
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-            );
-          } else if (state is AuthGoogleRegistrationRequired) {
-            // New Google user needs to complete registration
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => GoogleRegisterScreen(
-                  tempToken: state.tempToken,
                 ),
               ),
             );
@@ -250,7 +241,6 @@ class _LoginFormState extends State<_LoginForm> {
                       : const Text('เข้าสู่ระบบ', style: TextStyle(fontSize: 16)),
                 ),
               ),
-              /*
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
@@ -275,7 +265,6 @@ class _LoginFormState extends State<_LoginForm> {
                   ),
                 ),
               ),
-              */
               const SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,

@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-// import 'package:google_sign_in/google_sign_in.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 
@@ -53,6 +54,12 @@ class AuthGoogleRegistrationRequired extends AuthState {
 class AuthCubit extends Cubit<AuthState> {
   final AuthService _authService;
   static const String _userKey = 'cached_user';
+  
+  // Define GoogleSignIn instance once
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: ['email', 'profile'],
+    serverClientId: '717179936950-aolfunbngehe1fj91bj8bp7uhufpvbnt.apps.googleusercontent.com',
+  );
 
   AuthCubit({AuthService? authService})
       : _authService = authService ?? AuthService(),
@@ -63,7 +70,7 @@ class AuthCubit extends Cubit<AuthState> {
     emit(AuthLoading());
 
     try {
-      // Check cached user first
+      // 1. Check cached user first (App Session)
       final prefs = await SharedPreferences.getInstance();
       final userJson = prefs.getString(_userKey);
 
@@ -71,12 +78,25 @@ class AuthCubit extends Cubit<AuthState> {
         try {
           final user = UserModel.fromJson(json.decode(userJson));
           emit(AuthAuthenticated(user));
+          return;
         } catch (e) {
-            // Json parse error, clear cache
+             // Json parse error, clear cache
              await prefs.remove(_userKey);
-             emit(AuthUnauthenticated());
         }
-        return;
+      }
+
+      // 2. If no valid app session, check for existing Google Session (Recovery)
+      // This handles cases where the app was killed during Google Sign In
+      try {
+        print('DEBUG: Checking for silent Google Sign In...');
+        final GoogleSignInAccount? googleUser = await _googleSignIn.signInSilently();
+        if (googleUser != null) {
+          print('DEBUG: Recovered Google Session: ${googleUser.email}');
+          await _handleGoogleUser(googleUser);
+          return;
+        }
+      } catch (e) {
+        print('DEBUG: Silent Google Sign In failed: $e');
       }
 
       emit(AuthUnauthenticated());
@@ -142,29 +162,40 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
-  // Sign In with Google (Temporarily Disabled)
+  // Sign In with Google
   Future<void> signInWithGoogle() async {
-    // This feature is currently disabled to prevent crash on launch
-    // due to missing google_sign_in dependency and configuration.
-    emit(const AuthError('Google Sign-In is temporarily disabled.'));
-    
-    /*
     emit(AuthLoading());
     try {
-      final GoogleSignIn googleSignIn = GoogleSignIn(
-        scopes: ['email', 'profile'],
-      );
+      // Force sign out first to allow user to choose account
+      print('DEBUG: googleSignIn.signOut() calling...');
+      await _googleSignIn.signOut();
+      print('DEBUG: googleSignIn.signOut() completed.');
       
-      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      print('DEBUG: googleSignIn.signIn() calling...');
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      print('DEBUG: googleSignIn.signIn() result: $googleUser');
       
       if (googleUser == null) {
         // User cancelled the sign-in
+        print('DEBUG: User cancelled sign-in (googleUser is null)');
         emit(AuthUnauthenticated());
         return;
       }
       
+      await _handleGoogleUser(googleUser);
+
+    } catch (e) {
+      String msg = e.toString().replaceAll('Exception: ', '');
+      emit(AuthError(msg));
+    }
+  }
+
+  // Helper method to process Google User (used by both signInWithGoogle and checkAuthStatus)
+  Future<void> _handleGoogleUser(GoogleSignInAccount googleUser) async {
+      print('DEBUG: Getting authentication/idToken...');
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       final String? idToken = googleAuth.idToken;
+      print('DEBUG: idToken received: ${idToken != null ? "YES (Length: ${idToken.length})" : "NO"}');
       
       if (idToken == null) {
         throw Exception('ไม่สามารถรับ ID Token จาก Google ได้');
@@ -175,30 +206,46 @@ class AuthCubit extends Cubit<AuthState> {
       
       // Check if this is a new user (needs registration) or existing user
       if (data['temp_token'] != null) {
-        // New user - need to complete registration
+        // New user - need to complete registration (explicit temp_token)
         emit(AuthGoogleRegistrationRequired(data['temp_token']));
       } else if (data['access_token'] != null) {
-        // Existing user - logged in successfully
-        final userData = data['data'] as Map<String, dynamic>? ?? {};
+        // Check if the access_token is actually a temp_token by decoding it
+        final accessToken = data['access_token'];
+        bool isRegisterToken = false;
         
-        final user = UserModel(
-          id: userData['user_id'] ?? 1,
-          username: userData['username'] ?? googleUser.displayName ?? 'Google User',
-          email: userData['email'] ?? googleUser.email,
-          profileImage: userData['image_url'],
-          loginType: LoginType.email,
-        );
-        
-        await _cacheUser(user);
-        emit(AuthAuthenticated(user));
+        try {
+          Map<String, dynamic> decodedToken = JwtDecoder.decode(accessToken);
+          print('Decoded Token: $decodedToken'); // Debug print
+          if (decodedToken['type'] == 'google_register') {
+            isRegisterToken = true;
+          }
+        } catch (e) {
+          // Token decode failed, assume normal access token
+          print('Token decode error: $e');
+        }
+
+        if (isRegisterToken) {
+           print('Emit AuthGoogleRegistrationRequired'); // Debug print
+           emit(AuthGoogleRegistrationRequired(accessToken));
+        } else {
+           // Existing user - logged in successfully
+          final userData = data['data'] as Map<String, dynamic>? ?? {};
+          
+          final user = UserModel(
+            id: userData['user_id'] ?? 1,
+            username: userData['username'] ?? googleUser.displayName ?? 'Google User',
+            email: userData['email'] ?? googleUser.email,
+            profileImage: userData['image_url'],
+            loginType: LoginType.email,
+          );
+          
+          await _cacheUser(user);
+          print('Emit AuthAuthenticated'); // Debug print
+          emit(AuthAuthenticated(user));
+        }
       } else {
         throw Exception('Invalid response from server');
       }
-    } catch (e) {
-      String msg = e.toString().replaceAll('Exception: ', '');
-      emit(AuthError(msg));
-    }
-    */
   }
 
   // Handle Google Login Result (Token received directly)
@@ -235,7 +282,7 @@ class AuthCubit extends Cubit<AuthState> {
     required String tempToken,
     required String username,
     required String gender,
-    required int age,
+    required String birthDate,
   }) async {
     emit(AuthLoading());
     try {
@@ -243,7 +290,7 @@ class AuthCubit extends Cubit<AuthState> {
         tempToken: tempToken,
         username: username,
         gender: gender,
-        age: age,
+        birthDate: birthDate,
       );
       
       // After success, we expect a token/user object similar to login
@@ -295,6 +342,11 @@ class AuthCubit extends Cubit<AuthState> {
     emit(AuthLoading());
 
     try {
+      // Ensure Google Sign Out
+      try {
+        await _googleSignIn.signOut();
+      } catch (_) {}
+
       // Clear cached user
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_userKey);

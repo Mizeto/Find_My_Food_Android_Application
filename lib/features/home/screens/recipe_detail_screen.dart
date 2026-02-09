@@ -261,6 +261,72 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
 
                   const SizedBox(height: 20),
 
+                  // Ingredients Section
+                  _buildSectionCard(
+                    icon: Icons.kitchen,
+                    title: 'วัตถุดิบ 🥬',
+                    color: Colors.teal,
+                    child: _isLoadingDetails
+                      ? const Center(child: CircularProgressIndicator())
+                      : (displayRecipe.ingredients != null && displayRecipe.ingredients!.isNotEmpty)
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: displayRecipe.ingredients!.map((ing) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 6),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: const BoxDecoration(
+                                        color: Colors.teal,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        ing.ingredientName,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.grey[800],
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.teal.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        '${ing.quantity.toStringAsFixed(ing.quantity.truncateToDouble() == ing.quantity ? 0 : 1)} ${ing.unitName}',
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.teal,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          )
+                        : Text(
+                            'ไม่มีข้อมูลวัตถุดิบ',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[500],
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                  ),
+
+                  const SizedBox(height: 20),
+
                   // Cooking Method
                   _buildSectionCard(
                     icon: Icons.restaurant_menu,

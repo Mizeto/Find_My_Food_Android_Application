@@ -44,7 +44,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
 
   Future<void> _refreshLists() async {
     try {
-      final lists = await _shoppingService.getShoppingList();
+      final lists = await _shoppingService.getAllShoppingLists();
       print('Fetched ${lists.length} shopping lists'); // Debug log
 
       // Sort items: Unchecked first, Checked last
@@ -69,41 +69,77 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
 
   Future<void> _createShoppingList() async {
     final TextEditingController nameController = TextEditingController();
+    String selectedType = 'market'; // Default to market
+    
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('สร้างรายการใหม่'),
-        content: TextField(
-          controller: nameController,
-          decoration: const InputDecoration(
-            hintText: 'ชื่อรายการ (เช่น ตลาดสด, ซุปเปอร์)',
-            border: OutlineInputBorder(),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('สร้างรายการใหม่'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  hintText: 'ชื่อรายการ (เช่น ตลาดสด, ซุปเปอร์)',
+                  border: OutlineInputBorder(),
+                ),
+                autofocus: true,
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  const Text('ประเภท: '),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: const Text('ตลาด'),
+                    selected: selectedType == 'market',
+                    selectedColor: AppTheme.primaryGreen.withOpacity(0.3),
+                    onSelected: (selected) {
+                      if (selected) setDialogState(() => selectedType = 'market');
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: const Text('สูตรอาหาร'),
+                    selected: selectedType == 'recipe',
+                    selectedColor: AppTheme.primaryOrange.withOpacity(0.3),
+                    onSelected: (selected) {
+                      if (selected) setDialogState(() => selectedType = 'recipe');
+                    },
+                  ),
+                ],
+              ),
+            ],
           ),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('ยกเลิก')),
-          ElevatedButton(
-            onPressed: () async {
-              if (nameController.text.isNotEmpty) {
-                Navigator.pop(context);
-                setState(() => _isLoading = true);
-                try {
-                  await _shoppingService.createNewShoppingList(nameController.text);
-                  // Wait for backend to propagate (Increased to 2s due to slow server)
-                  await Future.delayed(const Duration(seconds: 2));
-                  await _refreshLists();
-                } catch (e) {
-                  _showError('สร้างรายการไม่สำเร็จ');
-                } finally {
-                  setState(() => _isLoading = false);
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('ยกเลิก')),
+            ElevatedButton(
+              onPressed: () async {
+                if (nameController.text.isNotEmpty) {
+                  Navigator.pop(context);
+                  setState(() => _isLoading = true);
+                  try {
+                    await _shoppingService.createNewShoppingList(
+                      shoppingType: selectedType,
+                      listName: nameController.text,
+                    );
+                    // Wait for backend to propagate (Increased to 2s due to slow server)
+                    await Future.delayed(const Duration(seconds: 2));
+                    await _refreshLists();
+                  } catch (e) {
+                    _showError('สร้างรายการไม่สำเร็จ');
+                  } finally {
+                    setState(() => _isLoading = false);
+                  }
                 }
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryGreen, foregroundColor: Colors.white),
-            child: const Text('สร้าง'),
-          ),
-        ],
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryGreen, foregroundColor: Colors.white),
+              child: const Text('สร้าง'),
+            ),
+          ],
+        ),
       ),
     );
   }

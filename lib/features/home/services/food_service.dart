@@ -76,7 +76,14 @@ class RecipeService {
       if (response.statusCode == 200) {
          final Map<String, dynamic> jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
          if (jsonResponse['status'] == 'success') {
-           return RecipeModel.fromJson(jsonResponse['data']);
+           final data = jsonResponse['data'];
+           // API returns nested structure: {recipe: {...}, ingredients: [...], steps: [...], is_liked: bool}
+           // We need to merge them into a single object for RecipeModel.fromJson
+           final recipeData = data['recipe'] as Map<String, dynamic>;
+           recipeData['ingredients'] = data['ingredients'];
+           recipeData['steps'] = data['steps'];
+           recipeData['is_liked'] = data['is_liked'];
+           return RecipeModel.fromJson(recipeData);
          } else {
            throw Exception('API Error: ${jsonResponse['message']}');
          }
@@ -87,6 +94,7 @@ class RecipeService {
       throw Exception('Connection error: $e');
     }
   }
+
 
   // Helper to get token
   Future<String?> _getToken() async {
@@ -314,6 +322,92 @@ class RecipeService {
     } catch (e) {
       print('Error during Dish AI: $e');
       return null;
+    }
+  }
+
+  // GET /recipe/getMyCreateRecipe - Get recipes created by current user
+  Future<List<RecipeModel>> getMyCreatedRecipes() async {
+    try {
+      final headers = await _getHeaders();
+      final getHeaders = {
+        'accept': 'application/json',
+        if (headers['Authorization'] != null) 'Authorization': headers['Authorization']!,
+      };
+      
+      print('Fetching my created recipes: $baseUrl/recipe/getMyCreateRecipe');
+      final response = await http.get(
+        Uri.parse('$baseUrl/recipe/getMyCreateRecipe'),
+        headers: getHeaders,
+      ).timeout(const Duration(seconds: 60));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
+        
+        if (jsonResponse['status'] == 'success') {
+          final dynamic data = jsonResponse['data'];
+          if (data == null) return [];
+          if (data is List) {
+            return data.map((json) => RecipeModel.fromJson(json)).toList();
+          } else if (data is Map<String, dynamic>) {
+            return [RecipeModel.fromJson(data)];
+          }
+          return [];
+        } else {
+          print('API Error: ${jsonResponse['message']}');
+          return [];
+        }
+      } else {
+        throw Exception('Failed to load my recipes: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching my recipes: $e');
+      throw Exception('Connection error: $e');
+    }
+  }
+
+  // POST /recipe/likeRecipe/{recipe_id} - Like a recipe
+  Future<bool> likeRecipe(int recipeId) async {
+    try {
+      final headers = await _getHeaders();
+      print('Liking recipe: $baseUrl/recipe/likeRecipe/$recipeId');
+      
+      final response = await http.post(
+        Uri.parse('$baseUrl/recipe/likeRecipe/$recipeId'),
+        headers: headers,
+      );
+
+      print('Like Recipe Response: ${response.statusCode} ${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final jsonResponse = jsonDecode(response.body);
+        return jsonResponse['status'] == 'success';
+      }
+      return false;
+    } catch (e) {
+      print('Error liking recipe: $e');
+      throw Exception('Connection error: $e');
+    }
+  }
+
+  // DELETE /recipe/unlikeRecipe/{recipe_id} - Unlike a recipe
+  Future<bool> unlikeRecipe(int recipeId) async {
+    try {
+      final headers = await _getHeaders();
+      print('Unliking recipe: $baseUrl/recipe/unlikeRecipe/$recipeId');
+      
+      final response = await http.delete(
+        Uri.parse('$baseUrl/recipe/unlikeRecipe/$recipeId'),
+        headers: headers,
+      );
+
+      print('Unlike Recipe Response: ${response.statusCode} ${response.body}');
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(response.body);
+        return jsonResponse['status'] == 'success';
+      }
+      return false;
+    } catch (e) {
+      print('Error unliking recipe: $e');
+      throw Exception('Connection error: $e');
     }
   }
 }

@@ -38,17 +38,6 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
-
-    flavorDimensions += listOf("environment", "service")
-
-    productFlavors {
-        create("develop") {
-            dimension = "environment"
-        }
-        create("gms") {
-            dimension = "service"
-        }
-    }
 }
 
 flutter {

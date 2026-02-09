@@ -3,11 +3,13 @@ import 'food_model.dart';
 class ShoppingListModel {
   final int shoppingListId;
   final String listName;
+  final String shoppingType; // "recipe" or "market"
   final List<ShoppingItemModel> items;
 
   ShoppingListModel({
     required this.shoppingListId,
     required this.listName,
+    required this.shoppingType,
     required this.items,
   });
 
@@ -16,6 +18,7 @@ class ShoppingListModel {
     return ShoppingListModel(
       shoppingListId: json['shopping_list_id'] as int? ?? 0,
       listName: json['list_name'] as String? ?? 'รายการซื้อของ',
+      shoppingType: json['shopping_type'] as String? ?? 'market',
       items: itemsList?.map((i) => ShoppingItemModel.fromJson(i)).toList() ?? [],
     );
   }

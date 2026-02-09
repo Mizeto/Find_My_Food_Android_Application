@@ -48,6 +48,18 @@ class RecipeRepository {
           method = apiRecipe.steps!.map((s) => '${s.stepNo}. ${s.instruction}').join('\n');
        }
 
+       // Convert ingredients from RecipeIngredient to RecipeIngredientItem
+       List<RecipeIngredientItem>? ingredientItems;
+       if (apiRecipe.ingredients != null && apiRecipe.ingredients!.isNotEmpty) {
+          ingredientItems = apiRecipe.ingredients!.map((ing) => RecipeIngredientItem(
+            ingredientId: ing.ingredientId,
+            ingredientName: ing.ingredientName,
+            quantity: ing.quantityValue,
+            unitId: ing.unitId,
+            unitName: ing.unitName,
+          )).toList();
+       }
+
        return Recipe(
           id: apiRecipe.recipeId,
           title: apiRecipe.recipeName,
@@ -55,6 +67,7 @@ class RecipeRepository {
           cookingMethod: method,
           imageUrl: apiRecipe.imageUrl,
           prepTime: apiRecipe.cookingTimeMin,
+          ingredients: ingredientItems,
        );
     } catch (e) {
       throw Exception('Error loading recipe detail: $e');

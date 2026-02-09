@@ -132,7 +132,7 @@ class AuthService {
     required String tempToken,
     required String username,
     required String gender,
-    required int age,
+    required String birthDate,
   }) async {
     try {
       final response = await http.post(
@@ -145,7 +145,7 @@ class AuthService {
           'temp_token': tempToken,
           'username': username,
           'gender': gender,
-          'age': age,
+          'birth_date': birthDate,
         }),
       );
 
@@ -217,7 +217,7 @@ class AuthService {
   Future<Map<String, dynamic>> googleLoginWithIdToken(String idToken) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/auth/google/register'),
+        Uri.parse('$baseUrl/auth/google/login'),
         headers: {
           'Content-Type': 'application/json',
           'accept': 'application/json',

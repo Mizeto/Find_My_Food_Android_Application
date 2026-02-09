@@ -24,8 +24,8 @@ class ShoppingService {
     return headers;
   }
 
-  // 1. GET /shoppingCart/getShoppingList
-  Future<List<ShoppingListModel>> getShoppingList() async {
+  // 1. GET /shoppingCart/getShoppingList/{shopping_type}
+  Future<List<ShoppingListModel>> getShoppingList(String shoppingType) async {
     try {
       final headers = await _getHeaders();
       // Debug Token
@@ -36,9 +36,9 @@ class ShoppingService {
         if (headers['Authorization'] != null) 'Authorization': headers['Authorization']!,
       };
 
-      print('Fetching shopping list: $baseUrl/shoppingCart/getShoppingList');
+      print('Fetching shopping list: $baseUrl/shoppingCart/getShoppingList/$shoppingType');
       final response = await http.get(
-        Uri.parse('$baseUrl/shoppingCart/getShoppingList'),
+        Uri.parse('$baseUrl/shoppingCart/getShoppingList/$shoppingType'),
         headers: getHeaders,
       );
 
@@ -77,6 +77,27 @@ class ShoppingService {
       throw Exception('Connection error: $e');
     }
   }
+
+  // Helper method to get all shopping lists (both recipe and market combined)
+  Future<List<ShoppingListModel>> getAllShoppingLists() async {
+    try {
+      // Fetch both types in parallel
+      final results = await Future.wait([
+        getShoppingList('recipe'),
+        getShoppingList('market'),
+      ]);
+      
+      // Combine and return all lists
+      final allLists = <ShoppingListModel>[];
+      allLists.addAll(results[0]); // recipe lists
+      allLists.addAll(results[1]); // market lists
+      return allLists;
+    } catch (e) {
+      print('Error getting all shopping lists: $e');
+      throw Exception('Connection error: $e');
+    }
+  }
+
 
   // 2. PATCH /shoppingCartupdateShoppingItemUnit/{item_id}
   Future<bool> updateShoppingItemUnit(int itemId, int unitId) async {
@@ -178,14 +199,17 @@ class ShoppingService {
   }
 
   // 6. POST /shoppingCart/createNewShoppingList
-  Future<bool> createNewShoppingList(String listName) async {
+  Future<bool> createNewShoppingList({
+    required String shoppingType,
+    required String listName,
+    List<Map<String, dynamic>> items = const [],
+  }) async {
     try {
       final headers = await _getHeaders();
-      // Can add initial items if needed, but for now empty list creation is fine or just name
       final body = {
+        'shopping_type': shoppingType,
         'list_name': listName,
-        'status': 'pending', 
-        'items': [] // Backend fixed, sending empty list is now allowed
+        'items': items, // [{item_name, quantity, unit_id, note}, ...]
       };
       
       final response = await http.post(
