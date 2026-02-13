@@ -19,6 +19,13 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
   List<ShoppingListModel> _shoppingLists = [];
   List<UnitModel> _units = [];
   bool _isLoading = false;
+  bool _isMarketMode = true; // true = market, false = recipe
+
+  // Filtered lists based on current tab
+  List<ShoppingListModel> get _filteredLists {
+    final type = _isMarketMode ? 'market' : 'recipe';
+    return _shoppingLists.where((list) => list.shoppingType == type).toList();
+  }
 
   @override
   void initState() {
@@ -69,77 +76,50 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
 
   Future<void> _createShoppingList() async {
     final TextEditingController nameController = TextEditingController();
-    String selectedType = 'market'; // Default to market
+    // Default type based on current tab
+    String selectedType = _isMarketMode ? 'market' : 'recipe';
     
     await showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('สร้างรายการใหม่'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  hintText: 'ชื่อรายการ (เช่น ตลาดสด, ซุปเปอร์)',
-                  border: OutlineInputBorder(),
-                ),
-                autofocus: true,
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  const Text('ประเภท: '),
-                  const SizedBox(width: 8),
-                  ChoiceChip(
-                    label: const Text('ตลาด'),
-                    selected: selectedType == 'market',
-                    selectedColor: AppTheme.primaryGreen.withOpacity(0.3),
-                    onSelected: (selected) {
-                      if (selected) setDialogState(() => selectedType = 'market');
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                  ChoiceChip(
-                    label: const Text('สูตรอาหาร'),
-                    selected: selectedType == 'recipe',
-                    selectedColor: AppTheme.primaryOrange.withOpacity(0.3),
-                    onSelected: (selected) {
-                      if (selected) setDialogState(() => selectedType = 'recipe');
-                    },
-                  ),
-                ],
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: Text('สร้างรายการ${_isMarketMode ? "ตลาด" : "สูตรอาหาร"}ใหม่'),
+        content: TextField(
+          controller: nameController,
+          decoration: const InputDecoration(
+            hintText: 'ชื่อรากการ (เช่น ตลาดสด, เมนูเย็นนี้)',
+            border: OutlineInputBorder(),
           ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('ยกเลิก')),
-            ElevatedButton(
-              onPressed: () async {
-                if (nameController.text.isNotEmpty) {
-                  Navigator.pop(context);
-                  setState(() => _isLoading = true);
-                  try {
-                    await _shoppingService.createNewShoppingList(
-                      shoppingType: selectedType,
-                      listName: nameController.text,
-                    );
-                    // Wait for backend to propagate (Increased to 2s due to slow server)
-                    await Future.delayed(const Duration(seconds: 2));
-                    await _refreshLists();
-                  } catch (e) {
-                    _showError('สร้างรายการไม่สำเร็จ');
-                  } finally {
-                    setState(() => _isLoading = false);
-                  }
-                }
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryGreen, foregroundColor: Colors.white),
-              child: const Text('สร้าง'),
-            ),
-          ],
+          autofocus: true,
         ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('ยกเลิก')),
+          ElevatedButton(
+            onPressed: () async {
+              if (nameController.text.isNotEmpty) {
+                Navigator.pop(context);
+                setState(() => _isLoading = true);
+                try {
+                  await _shoppingService.createNewShoppingList(
+                    shoppingType: selectedType,
+                    listName: nameController.text,
+                  );
+                  // Wait for backend to propagate
+                  await Future.delayed(const Duration(seconds: 1));
+                  await _refreshLists();
+                } catch (e) {
+                  _showError('สร้างรายการไม่สำเร็จ');
+                } finally {
+                  setState(() => _isLoading = false);
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _isMarketMode ? AppTheme.primaryGreen : AppTheme.primaryOrange,
+              foregroundColor: Colors.white
+            ),
+            child: const Text('สร้าง'),
+          ),
+        ],
       ),
     );
   }
@@ -293,34 +273,99 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
     );
   }
 
+  Widget _buildModeToggle({required String label, required IconData icon, required bool isSelected, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: isSelected ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))] : null,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18, color: isSelected ? (_isMarketMode ? AppTheme.primaryGreen : AppTheme.primaryOrange) : Colors.grey),
+            const SizedBox(width: 8),
+            Text(label, style: TextStyle(fontSize: 14, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? Colors.black : Colors.grey)),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final filtered = _filteredLists;
+    final activeColor = _isMarketMode ? AppTheme.primaryGreen : AppTheme.primaryOrange;
+    final activeGradient = _isMarketMode ? AppTheme.greenGradient : AppTheme.primaryGradient;
+
     return Scaffold(
       body: RefreshIndicator(
         onRefresh: _refreshLists,
-        color: AppTheme.primaryGreen,
+        color: activeColor,
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             // AppBar
             SliverAppBar(
-
-            expandedHeight: 100,
-            floating: true,
-            pinned: true,
-            automaticallyImplyLeading: false,
-            flexibleSpace: Container(
-              decoration: const BoxDecoration(gradient: AppTheme.greenGradient),
-              child: FlexibleSpaceBar(
-                centerTitle: true,
-                title: Text('รายการจ่ายตลาด (${_shoppingLists.length}) 🛒', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.white)),
+              expandedHeight: 100,
+              floating: true,
+              pinned: true,
+              automaticallyImplyLeading: false,
+              flexibleSpace: Container(
+                decoration: BoxDecoration(gradient: activeGradient),
+                child: FlexibleSpaceBar(
+                  centerTitle: true,
+                  title: Text(
+                    _isMarketMode 
+                      ? 'รายการจ่ายตลาด (${filtered.length}) 🛒' 
+                      : 'รายการจากสูตร (${filtered.length}) 📝',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.white),
+                  ),
+                ),
               ),
             ),
-          ),
+
+            // Tab Toggle
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _buildModeToggle(
+                          label: 'ตลาด',
+                          icon: Icons.store,
+                          isSelected: _isMarketMode,
+                          onTap: () => setState(() => _isMarketMode = true),
+                        ),
+                      ),
+                      Expanded(
+                        child: _buildModeToggle(
+                          label: 'สูตรอาหาร',
+                          icon: Icons.menu_book,
+                          isSelected: !_isMarketMode,
+                          onTap: () => setState(() => _isMarketMode = false),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           
           if (_isLoading && _shoppingLists.isEmpty)
              const SliverFillRemaining(child: Center(child: CircularProgressIndicator()))
-          else if (_shoppingLists.isEmpty)
+          else if (filtered.isEmpty)
              SliverFillRemaining(
               hasScrollBody: false,
               child: _buildEmptyState(),
@@ -331,10 +376,10 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
-                    final list = _shoppingLists[index];
+                    final list = filtered[index];
                     return _buildShoppingListCard(list);
                   },
-                  childCount: _shoppingLists.length,
+                  childCount: filtered.length,
                 ),
               ),
             ),
@@ -345,9 +390,12 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _createShoppingList,
-        backgroundColor: AppTheme.primaryOrange,
+        backgroundColor: activeColor,
         icon: const Icon(Icons.add_shopping_cart, color: Colors.white),
-        label: const Text('สร้างรายการใหม่', style: TextStyle(color: Colors.white)),
+        label: Text(
+          _isMarketMode ? 'สร้างรายการตลาด' : 'สร้างรายการสูตร',
+          style: const TextStyle(color: Colors.white),
+        ),
       ),
     );
   }
@@ -382,10 +430,15 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryGreen.withOpacity(0.1),
+                    color: list.shoppingType == 'recipe'
+                      ? AppTheme.primaryOrange.withOpacity(0.1)
+                      : AppTheme.primaryGreen.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.store, color: AppTheme.primaryGreen),
+                  child: Icon(
+                    list.shoppingType == 'recipe' ? Icons.menu_book : Icons.store,
+                    color: list.shoppingType == 'recipe' ? AppTheme.primaryOrange : AppTheme.primaryGreen,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(

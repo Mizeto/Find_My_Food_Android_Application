@@ -6,6 +6,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
+import '../../profile/services/user_service.dart'; // Import UserService
 
 // Auth States
 abstract class AuthState extends Equatable {
@@ -21,11 +22,12 @@ class AuthLoading extends AuthState {}
 
 class AuthAuthenticated extends AuthState {
   final UserModel user;
+  final String? message;
 
-  const AuthAuthenticated(this.user);
+  const AuthAuthenticated(this.user, {this.message});
 
   @override
-  List<Object?> get props => [user];
+  List<Object?> get props => [user, message];
 }
 
 class AuthUnauthenticated extends AuthState {}
@@ -53,6 +55,7 @@ class AuthGoogleRegistrationRequired extends AuthState {
 // Auth Cubit
 class AuthCubit extends Cubit<AuthState> {
   final AuthService _authService;
+  final UserService _userService; // Add UserService
   static const String _userKey = 'cached_user';
   
   // Define GoogleSignIn instance once
@@ -61,8 +64,9 @@ class AuthCubit extends Cubit<AuthState> {
     serverClientId: '717179936950-aolfunbngehe1fj91bj8bp7uhufpvbnt.apps.googleusercontent.com',
   );
 
-  AuthCubit({AuthService? authService})
+  AuthCubit({AuthService? authService, UserService? userService})
       : _authService = authService ?? AuthService(),
+        _userService = userService ?? UserService(),
         super(AuthInitial());
 
   // Check if user is already logged in
@@ -111,17 +115,33 @@ class AuthCubit extends Cubit<AuthState> {
 
     try {
       final userData = await _authService.login(username, password);
+      print('DEBUG: AuthService.login returned: $userData');
       
       // Inject dummy ID if missing, to satisfy UserModel requirements
-      if (!userData.containsKey('user_id')) {
-        userData['user_id'] = 1;
+      final userId = userData['user_id'] as int? ?? 1;
+      
+      final initialUser = UserModel.fromJson(userData);
+      print('DEBUG: Initial user from login: $initialUser');
+      
+      // Try to fetch full profile immediately for the latest data (including image)
+      print('DEBUG: Attempting investigative profile fetch for $username (ID: $userId)...');
+      final fullProfile = await _userService.getUserProfile(
+        userId: userId,
+        username: initialUser.username,
+      );
+
+      if (fullProfile != null) {
+        print('DEBUG: Post-login profile fetch SUCCESS: $fullProfile');
+      } else {
+        print('DEBUG: Post-login profile fetch FAILED (returning null)');
       }
+
+      final finalUser = fullProfile ?? initialUser;
       
-      final user = UserModel.fromJson(userData);
-      
-      await _cacheUser(user);
-      emit(AuthAuthenticated(user));
+      await _cacheUser(finalUser);
+      emit(AuthAuthenticated(finalUser));
     } catch (e) {
+      print('DEBUG: Login Error: $e');
       String msg = e.toString().replaceAll('Exception: ', '');
       emit(AuthError(msg));
     }
@@ -135,7 +155,7 @@ class AuthCubit extends Cubit<AuthState> {
     String firstName,
     String lastName,
     String gender,
-    int age,
+    String birthDate,
   ) async {
     emit(AuthLoading());
 
@@ -147,7 +167,7 @@ class AuthCubit extends Cubit<AuthState> {
         firstName: firstName,
         lastName: lastName,
         gender: gender,
-        age: age,
+        birthDate: birthDate,
       );
 
       if (success) {
@@ -230,18 +250,36 @@ class AuthCubit extends Cubit<AuthState> {
         } else {
            // Existing user - logged in successfully
           final userData = data['data'] as Map<String, dynamic>? ?? {};
+          final userId = userData['user_id'] as int? ?? 1;
+          print('DEBUG: Google Login success. User data: $userData');
           
-          final user = UserModel(
-            id: userData['user_id'] ?? 1,
-            username: userData['username'] ?? googleUser.displayName ?? 'Google User',
-            email: userData['email'] ?? googleUser.email,
-            profileImage: userData['image_url'],
-            loginType: LoginType.email,
+          // Use fromJson for consistent normalization and parsing
+          final initialUser = UserModel.fromJson({
+            ...userData,
+            'user_id': userId, // Ensure ID is present
+            if (userData['email'] == null) 'email': googleUser.email,
+            if (userData['username'] == null) 'username': googleUser.displayName,
+          });
+          print('DEBUG: Initial Google user: $initialUser');
+          
+          // Fetch full profile for latest data
+          print('DEBUG: Attempting investigative profile fetch for Google User ${initialUser.username} (ID: $userId)...');
+          final fullProfile = await _userService.getUserProfile(
+            userId: userId,
+            username: initialUser.username,
           );
-          
-          await _cacheUser(user);
+
+          if (fullProfile != null) {
+            print('DEBUG: Post-Google-login profile fetch SUCCESS: $fullProfile');
+          } else {
+            print('DEBUG: Post-Google-login profile fetch FAILED (returning null)');
+          }
+
+          final finalUser = fullProfile ?? initialUser;
+
+          await _cacheUser(finalUser);
           print('Emit AuthAuthenticated'); // Debug print
-          emit(AuthAuthenticated(user));
+          emit(AuthAuthenticated(finalUser));
         }
       } else {
         throw Exception('Invalid response from server');
@@ -304,22 +342,36 @@ class AuthCubit extends Cubit<AuthState> {
 
   // Upload Profile Image
   Future<void> uploadProfileImage(String imagePath) async {
+    final originalUser = currentUser; // Capture user before loading
     emit(AuthLoading());
     try {
-      final imageUrl = await _authService.uploadUserImage(imagePath);
+      // 1. Upload image
+      final uploadedUrl = await _authService.uploadUserImage(imagePath);
       
-      // Update the current user with new image
-      if (state is AuthAuthenticated || currentUser != null) {
-        final updatedUser = currentUser!.copyWith(profileImage: imageUrl);
-        await _cacheUser(updatedUser);
-        emit(AuthAuthenticated(updatedUser));
+      // 2. Fetch updated user profile (investigative fetch)
+      final updatedUserFromApi = await _userService.getUserProfile(
+        userId: originalUser?.id,
+        username: originalUser?.username,
+      );
+
+      if (updatedUserFromApi != null) {
+        // Update cache and emit
+        await _cacheUser(updatedUserFromApi);
+        emit(AuthAuthenticated(updatedUserFromApi, message: 'อัปเดตรูปโปรไฟล์สำเร็จ'));
+      } else if (originalUser != null) {
+        // Fallback: Use original user but update image URL if returned from upload
+        final fallbackUser = uploadedUrl.isNotEmpty 
+            ? originalUser.copyWith(profileImage: uploadedUrl) 
+            : originalUser;
+            
+        emit(AuthAuthenticated(fallbackUser, message: 'อัปโหลดสำเร็จ (ระบบกำลังประมวลผลรูปภาพ)')); 
       }
     } catch (e) {
       String msg = e.toString().replaceAll('Exception: ', '');
       emit(AuthError(msg));
       // Re-emit authenticated state if we had a user
-      if (currentUser != null) {
-        emit(AuthAuthenticated(currentUser!));
+      if (originalUser != null) {
+        emit(AuthAuthenticated(originalUser));
       }
     }
   }
@@ -377,5 +429,58 @@ class AuthCubit extends Cubit<AuthState> {
   bool get isGuest {
     final user = currentUser;
     return user?.isGuest ?? false;
+  }
+
+  // Update Username
+  Future<void> updateUsername(String newUsername) async {
+    final originalUser = currentUser; // Capture user before loading
+    emit(AuthLoading());
+    try {
+      final success = await _userService.updateUsername(newUsername);
+      if (success) {
+        if (originalUser != null) {
+          final updatedUser = originalUser.copyWith(username: newUsername);
+          await _cacheUser(updatedUser);
+          emit(AuthAuthenticated(updatedUser, message: 'แก้ไขชื่อผู้ใช้สำเร็จ')); // Use captured user
+        } else {
+           // Should not happen, but if originalUser was null, try to reload/check
+           emit(AuthError('User not found locally'));
+        }
+      } else {
+        emit(AuthError('Failed to update username'));
+        // Restore state
+        if (originalUser != null) emit(AuthAuthenticated(originalUser));
+      }
+    } catch (e) {
+      String msg = e.toString().replaceAll('Exception: ', '');
+      emit(AuthError(msg));
+       if (originalUser != null) emit(AuthAuthenticated(originalUser));
+    }
+  }
+
+  // Change Password
+  Future<void> changePassword(String currentPassword, String newPassword, String confirmPassword) async {
+    final originalUser = currentUser; // Capture user before loading
+    emit(AuthLoading());
+    try {
+      final success = await _userService.changePassword(
+        currentPassword: currentPassword, 
+        newPassword: newPassword, 
+        confirmPassword: confirmPassword
+      );
+      
+      if (success) {
+        if (originalUser != null) {
+          emit(AuthAuthenticated(originalUser, message: 'เปลี่ยนรหัสผ่านสำเร็จ'));
+        }
+      } else {
+        emit(AuthError('Failed to change password'));
+        if (originalUser != null) emit(AuthAuthenticated(originalUser));
+      }
+    } catch (e) {
+      String msg = e.toString().replaceAll('Exception: ', '');
+      emit(AuthError(msg));
+      if (originalUser != null) emit(AuthAuthenticated(originalUser));
+    }
   }
 }

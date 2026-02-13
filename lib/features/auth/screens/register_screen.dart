@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import '../cubit/auth_cubit.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -14,7 +15,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _usernameController = TextEditingController();
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
-  final _ageController = TextEditingController();
+  final _birthDateController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -22,13 +23,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String _selectedGender = 'Male'; // Default gender
 
   final List<String> _genders = ['Male', 'Female', 'Other'];
+  DateTime? _selectedDate;
+  int _calculatedAge = 0;
 
   @override
   void dispose() {
     _usernameController.dispose();
     _firstNameController.dispose();
     _lastNameController.dispose();
-    _ageController.dispose();
+    _birthDateController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -37,6 +40,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void _onRegister() {
     if (_formKey.currentState!.validate()) {
+        if (_selectedDate == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('กรุณาระบุวันเกิด')),
+        );
+        return;
+      }
+      
       context.read<AuthCubit>().register(
             _usernameController.text.trim(),
             _emailController.text.trim(),
@@ -44,10 +54,52 @@ class _RegisterScreenState extends State<RegisterScreen> {
             _firstNameController.text.trim(), // First Name
             _lastNameController.text.trim(), // Last Name
             _selectedGender, // Gender
-            int.tryParse(_ageController.text) ?? 0, // Age
+            DateFormat('yyyy-MM-dd').format(_selectedDate!), // Birth Date
           );
     }
   }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().subtract(const Duration(days: 365 * 18)), // Default to 18 years ago
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFFFF6B35),
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+        _birthDateController.text = DateFormat('dd/MM/yyyy').format(picked);
+        _calculateAge();
+      });
+    }
+  }
+
+  void _calculateAge() {
+    if (_selectedDate == null) return;
+    
+    final now = DateTime.now();
+    int age = now.year - _selectedDate!.year;
+    if (now.month < _selectedDate!.month || 
+       (now.month == _selectedDate!.month && now.day < _selectedDate!.day)) {
+      age--;
+    }
+    _calculatedAge = age;
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -182,15 +234,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                               const SizedBox(width: 10),
                               Expanded(
-                                flex: 1,
+                                flex: 2, // Gave more space for date
                                 child: TextFormField(
-                                  controller: _ageController,
-                                  keyboardType: TextInputType.number,
+                                  controller: _birthDateController,
+                                  readOnly: true,
+                                  onTap: () => _selectDate(context),
                                   decoration: InputDecoration(
-                                    labelText: 'อายุ',
+                                    labelText: 'วันเกิด',
+                                    hintText: 'วว/ดด/ปปปป',
+                                    prefixIcon: const Icon(Icons.calendar_today),
+                                    suffixIcon: _selectedDate != null 
+                                      ? Padding(
+                                          padding: const EdgeInsets.all(12.0),
+                                          child: Text('อายุ $_calculatedAge ปี', style: const TextStyle(fontSize: 12)),
+                                        ) 
+                                      : null,
                                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                                   ),
-                                  validator: (v) => (v == null || v.isEmpty || int.tryParse(v) == null) ? 'ระบุอายุ' : null,
+                                  validator: (v) => (v == null || v.isEmpty) ? 'ระบุวันเกิด' : null,
                                 ),
                               ),
                             ],

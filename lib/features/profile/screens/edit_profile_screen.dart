@@ -105,6 +105,89 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
+  Future<void> _showEditUsernameDialog(String currentUsername) async {
+    final controller = TextEditingController(text: currentUsername);
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('แก้ไขชื่อผู้ใช้'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(labelText: 'ชื่อผู้ใช้ใหม่'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ยกเลิก'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.read<AuthCubit>().updateUsername(controller.text.trim());
+            },
+            child: const Text('บันทึก'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showChangePasswordDialog() async {
+    final oldPassController = TextEditingController();
+    final newPassController = TextEditingController();
+    final confirmPassController = TextEditingController();
+    
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('เปลี่ยนรหัสผ่าน'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+             TextField(
+              controller: oldPassController,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'รหัสผ่านเดิม'),
+            ),
+             TextField(
+              controller: newPassController,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'รหัสผ่านใหม่'),
+            ),
+             TextField(
+              controller: confirmPassController,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'ยืนยันรหัสผ่านใหม่'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ยกเลิก'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              if (newPassController.text != confirmPassController.text) {
+                 ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('รหัสผ่านใหม่ไม่ตรงกัน')),
+                 );
+                 return;
+              }
+              context.read<AuthCubit>().changePassword(
+                oldPassController.text, 
+                newPassController.text, 
+                confirmPassController.text
+              );
+            },
+            child: const Text('บันทึก'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -114,7 +197,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         backgroundColor: AppTheme.primaryOrange,
         foregroundColor: Colors.white,
       ),
-      body: BlocBuilder<AuthCubit, AuthState>(
+      body: BlocConsumer<AuthCubit, AuthState>(
+        listener: (context, state) {
+          if (state is AuthError) {
+             ScaffoldMessenger.of(context).showSnackBar(
+               SnackBar(
+                 content: Text(state.message),
+                 backgroundColor: Colors.red,
+               ),
+             );
+          } else if (state is AuthAuthenticated && state.message != null) {
+             ScaffoldMessenger.of(context).showSnackBar(
+               SnackBar(
+                 content: Text(state.message!),
+                 backgroundColor: Colors.green,
+               ),
+             );
+          }
+        },
         builder: (context, state) {
           if (state is! AuthAuthenticated) {
             return const Center(child: CircularProgressIndicator());
@@ -203,12 +303,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           icon: Icons.person,
                           label: 'ชื่อผู้ใช้',
                           value: user.username,
+                          onEdit: () => _showEditUsernameDialog(user.username),
                         ),
                         const Divider(height: 24),
                         _InfoRow(
                           icon: Icons.email,
                           label: 'อีเมล',
                           value: user.email.isNotEmpty ? user.email : '-',
+                          // Email usually not editable directly or needs verification, so leaving readonly
                         ),
                       ],
                     ),
@@ -217,13 +319,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
                 const SizedBox(height: 24),
 
-                // Future: Edit Button (disabled for now)
+                // Change Password Button
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
-                    onPressed: null, // Will enable in future
-                    icon: const Icon(Icons.edit),
-                    label: const Text('แก้ไขข้อมูล (เร็วๆ นี้)'),
+                    onPressed: _showChangePasswordDialog,
+                    icon: const Icon(Icons.lock_reset),
+                    label: const Text('เปลี่ยนรหัสผ่าน'),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
@@ -260,11 +362,13 @@ class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
+  final VoidCallback? onEdit; // Added onEdit callback
 
   const _InfoRow({
     required this.icon,
     required this.label,
     required this.value,
+    this.onEdit,
   });
 
   @override
@@ -302,6 +406,11 @@ class _InfoRow extends StatelessWidget {
             ],
           ),
         ),
+        if (onEdit != null)
+           IconButton(
+            icon: const Icon(Icons.edit, size: 20, color: Colors.grey), 
+            onPressed: onEdit,
+           ),
       ],
     );
   }

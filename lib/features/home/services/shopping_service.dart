@@ -55,12 +55,20 @@ class ShoppingService {
           }
           if (data is List) {
             try {
-              return data.map((json) => ShoppingListModel.fromJson(json)).toList();
+              return data.map((json) {
+                if (json is Map<String, dynamic>) {
+                  // Explicitly set the type based on the requested endpoint
+                  // This fixes the issue where API might not return the type in the object
+                  json['shopping_type'] = shoppingType;
+                }
+                return ShoppingListModel.fromJson(json);
+              }).toList();
             } catch (e) {
               print('Parsing Error: $e'); // Catch parsing error
               return [];
             }
           } else if (data is Map<String, dynamic>) {
+             data['shopping_type'] = shoppingType; // Force type for single object too
              return [ShoppingListModel.fromJson(data)];
           }
           return [];

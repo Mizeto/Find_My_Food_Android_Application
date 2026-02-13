@@ -6,6 +6,10 @@ class UserModel extends Equatable {
   final int id; // Changed to int to match SERIAL in DB
   final String username;
   final String email;
+  final String? firstName;
+  final String? lastName;
+  final String? gender;
+  final DateTime? birthDate;
   final String? profileImage;
   final LoginType loginType;
 
@@ -13,6 +17,10 @@ class UserModel extends Equatable {
     required this.id,
     required this.username,
     required this.email,
+    this.firstName,
+    this.lastName,
+    this.gender,
+    this.birthDate,
     this.profileImage,
     required this.loginType,
   });
@@ -21,11 +29,30 @@ class UserModel extends Equatable {
 
   // From JSON (SharedPreferences / API)
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    String? rawImage = json['profile_image'] ?? json['image_url'];
+    
+    // Normalize image URL
+    String? normalizedImage;
+    if (rawImage != null && rawImage.isNotEmpty) {
+      if (rawImage.startsWith('http')) {
+        normalizedImage = rawImage;
+      } else {
+        // Assume relative path from backend
+        // Make sure it doesn't have double slashes
+        String cleanPath = rawImage.startsWith('/') ? rawImage.substring(1) : rawImage;
+        normalizedImage = 'https://find-my-food-api.onrender.com/$cleanPath';
+      }
+    }
+
     return UserModel(
-      id: json['user_id'] is int ? json['user_id'] : int.parse(json['user_id'].toString()),
+      id: int.tryParse(json['user_id'].toString()) ?? 0,
       username: json['username'] ?? 'User',
       email: json['email'] ?? '',
-      profileImage: json['profile_image'],
+      firstName: json['first_name'],
+      lastName: json['last_name'],
+      gender: json['gender'],
+      birthDate: json['birth_date'] != null ? DateTime.tryParse(json['birth_date']) : null,
+      profileImage: normalizedImage,
       loginType: json['loginType'] != null
           ? LoginType.values.firstWhere(
               (e) => e.name == json['loginType'],
@@ -41,6 +68,10 @@ class UserModel extends Equatable {
       'user_id': id,
       'username': username,
       'email': email,
+      'first_name': firstName,
+      'last_name': lastName,
+      'gender': gender,
+      'birth_date': birthDate?.toIso8601String().split('T')[0],
       'profile_image': profileImage,
       'loginType': loginType.name,
     };
@@ -48,7 +79,7 @@ class UserModel extends Equatable {
 
   // Guest user factory
   factory UserModel.guest() {
-    return UserModel(
+    return const UserModel(
       id: -1,
       username: 'ผู้เยี่ยมชม',
       email: '',
@@ -61,6 +92,10 @@ class UserModel extends Equatable {
     int? id,
     String? username,
     String? email,
+    String? firstName,
+    String? lastName,
+    String? gender,
+    DateTime? birthDate,
     String? profileImage,
     LoginType? loginType,
   }) {
@@ -68,11 +103,15 @@ class UserModel extends Equatable {
       id: id ?? this.id,
       username: username ?? this.username,
       email: email ?? this.email,
+      firstName: firstName ?? this.firstName,
+      lastName: lastName ?? this.lastName,
+      gender: gender ?? this.gender,
+      birthDate: birthDate ?? this.birthDate,
       profileImage: profileImage ?? this.profileImage,
       loginType: loginType ?? this.loginType,
     );
   }
 
   @override
-  List<Object?> get props => [id, username, email, profileImage, loginType];
+  List<Object?> get props => [id, username, email, firstName, lastName, gender, birthDate, profileImage, loginType];
 }

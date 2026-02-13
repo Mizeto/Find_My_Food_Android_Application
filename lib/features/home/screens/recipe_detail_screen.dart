@@ -5,6 +5,8 @@ import '../../../core/theme/app_theme.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/repositories/recipe_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/shopping_service.dart';
+import '../models/food_model.dart';
 
 class RecipeDetailScreen extends StatefulWidget {
   final Recipe recipe;
@@ -477,30 +479,59 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
     );
   }
 
-  void _showAddIngredientsDialog(BuildContext context) {
-    final TextEditingController ingredientController = TextEditingController();
+  void _showAddIngredientsDialog(BuildContext context) async {
+    // Use user loaded recipe details if available, else fallback to widget.recipe
+    final currentRecipe = _fullRecipe ?? widget.recipe;
+    final ingredients = currentRecipe.ingredients ?? [];
+    
+    if (ingredients.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ไม่มีข้อมูลวัตถุดิบในเมนูนี้')),
+      );
+      return;
+    }
+
+    // Load units
+    List<UnitModel> allUnits = [];
+    try {
+      allUnits = await context.read<RecipeRepository>().getUnits();
+    } catch (e) {
+      print('Error loading units: $e');
+    }
+
+    // Selected state
+    final Set<int> selectedIndices = Set.from(List.generate(ingredients.length, (i) => i));
+    
+    // Modified values
+    final Map<int, double> quantities = {};
+    final Map<int, int> unitIds = {};
+    
+    // Initialize with current values
+    for (int i = 0; i < ingredients.length; i++) {
+        quantities[i] = ingredients[i].quantity;
+        unitIds[i] = ingredients[i].unitId;
+    }
+
+    if (!context.mounted) return;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-        ),
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          height: MediaQuery.of(context).size.height * 0.85,
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+          ),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Handle bar
               Center(
                 child: Container(
+                  margin: const EdgeInsets.only(top: 12),
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
@@ -509,119 +540,287 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
-
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      gradient: AppTheme.greenGradient,
-                      borderRadius: BorderRadius.circular(15),
+              
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.greenGradient,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.shopping_basket, color: Colors.white),
                     ),
-                    child: const Icon(
-                      Icons.shopping_basket,
-                      color: Colors.white,
-                      size: 24,
+                    const SizedBox(width: 16),
+                    const Expanded(
+                      child: Text(
+                        'เลือกวัตถุดิบที่ต้องการ',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  const Text(
-                    'เพิ่มวัตถุดิบ',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              Text(
-                'สำหรับ "${widget.recipe.title}"',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 14,
+                  ],
                 ),
               ),
-
-              const SizedBox(height: 20),
-
-              TextField(
-                controller: ingredientController,
-                decoration: InputDecoration(
-                  hintText: 'พิมพ์วัตถุดิบ (เช่น ไข่ไก่ 3 ฟอง)',
-                  prefixIcon:
-                      const Icon(Icons.edit, color: AppTheme.primaryGreen),
-                  filled: true,
-                  fillColor: Colors.grey[100],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(15),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
+              
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Text('ปรับเปลี่ยนจำนวนและหน่วยได้ตามต้องการ', style: TextStyle(color: Colors.grey[600])),
               ),
 
-              const SizedBox(height: 20),
+              const Divider(height: 30),
 
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    final ingredient = ingredientController.text.trim();
-                    if (ingredient.isNotEmpty) {
-                      final prefs = await SharedPreferences.getInstance();
-                      final items =
-                          prefs.getStringList('shopping_list') ?? [];
-                      items.add(ingredient);
-                      await prefs.setStringList('shopping_list', items);
-
-                      if (context.mounted) {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Row(
+              // Ingredient List
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  itemCount: ingredients.length,
+                  itemBuilder: (context, index) {
+                    final ing = ingredients[index];
+                    final isSelected = selectedIndices.contains(index);
+                    final currentQty = quantities[index] ?? ing.quantity;
+                    final currentUnitId = unitIds[index] ?? ing.unitId;
+                    
+                    return Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.03),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                        border: Border.all(
+                          color: isSelected ? AppTheme.primaryGreen.withOpacity(0.3) : Colors.transparent,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: isSelected,
+                            activeColor: AppTheme.primaryGreen,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                            onChanged: (val) {
+                              setModalState(() {
+                                if (val == true) {
+                                  selectedIndices.add(index);
+                                } else {
+                                  selectedIndices.remove(index);
+                                }
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Icon(Icons.check_circle,
-                                    color: Colors.white),
-                                const SizedBox(width: 12),
-                                Text('เพิ่ม "$ingredient" แล้ว'),
+                                Text(
+                                  ing.ingredientName,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: isSelected ? Colors.black : Colors.grey[400],
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    // Quantity Stepper
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[100],
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          IconButton(
+                                            visualDensity: VisualDensity.compact,
+                                            icon: const Icon(Icons.remove, size: 16),
+                                            onPressed: !isSelected ? null : () {
+                                                if (currentQty > 0.5) {
+                                                  setModalState(() => quantities[index] = currentQty - 0.5);
+                                                }
+                                            },
+                                          ),
+                                          SizedBox(
+                                            width: 40,
+                                            child: Text(
+                                              currentQty.toStringAsFixed(currentQty.truncateToDouble() == currentQty ? 0 : 1),
+                                              textAlign: TextAlign.center,
+                                              style: const TextStyle(fontWeight: FontWeight.bold),
+                                            ),
+                                          ),
+                                          IconButton(
+                                            visualDensity: VisualDensity.compact,
+                                            icon: const Icon(Icons.add, size: 16),
+                                            onPressed: !isSelected ? null : () {
+                                                setModalState(() => quantities[index] = currentQty + 0.5);
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    // Unit Dropdown
+                                    Expanded(
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[100],
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: DropdownButtonHideUnderline(
+                                          child: DropdownButton<int>(
+                                            value: currentUnitId == 0 && allUnits.isNotEmpty ? allUnits.first.unitId : currentUnitId,
+                                            isExpanded: true,
+                                            style: const TextStyle(fontSize: 14, color: Colors.black, fontWeight: FontWeight.w500),
+                                            items: allUnits.map((u) => DropdownMenuItem(
+                                              value: u.unitId,
+                                              child: Text(u.unitName),
+                                            )).toList(),
+                                            onChanged: !isSelected ? null : (val) {
+                                               if (val != null) {
+                                                  setModalState(() => unitIds[index] = val);
+                                               }
+                                            },
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ],
                             ),
-                            backgroundColor: AppTheme.primaryGreen,
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
                           ),
-                        );
-                      }
-                    }
+                        ],
+                      ),
+                    );
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryGreen,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
+                ),
+              ),
+
+              // Action Button
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      offset: const Offset(0, -4),
+                      blurRadius: 10,
                     ),
-                  ),
-                  child: const Text(
-                    'เพิ่มลงรายการซื้อ',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                  ],
+                ),
+                child: SafeArea(
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: selectedIndices.isEmpty ? null : () async {
+                        Navigator.pop(context);
+                        
+                        // Prepare custom selections
+                        final List<Map<String, dynamic>> customSelections = [];
+                        for (final index in selectedIndices) {
+                            final ing = ingredients[index];
+                            final qty = quantities[index] ?? ing.quantity;
+                            final unitId = unitIds[index] ?? ing.unitId;
+                            
+                            customSelections.add({
+                                'item_name': ing.ingredientName,
+                                'quantity': qty,
+                                'unit_id': unitId,
+                                'is_check': false,
+                            });
+                        }
+                        
+                        _createShoppingListFromCustomSelection(customSelections);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryOrange,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                        disabledBackgroundColor: Colors.grey[300],
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        'สร้างรายการซื้อ (${selectedIndices.length})',
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
                 ),
               ),
-
-              const SizedBox(height: 16),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Future<void> _createShoppingListFromCustomSelection(List<Map<String, dynamic>> itemsPayload) async {
+    // Show Loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final success = await ShoppingService().createNewShoppingList(
+        shoppingType: 'recipe',
+        listName: 'วัตถุดิบ: ${widget.recipe.title}',
+        items: itemsPayload,
+      );
+
+      if (context.mounted) {
+        Navigator.pop(context); // Close loading
+        
+        if (success) {
+           ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(
+                children: [
+                   Icon(Icons.check_circle, color: Colors.white),
+                   SizedBox(width: 12),
+                   Expanded(child: Text('สร้างรายการสั่งซื้อเรียบร้อยแล้ว!')),
+                ],
+              ),
+              backgroundColor: AppTheme.primaryGreen,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              action: SnackBarAction(
+                label: 'ดูรายการ',
+                textColor: Colors.white,
+                onPressed: () {
+                   // Navigate to Shopping List Screen
+                },
+              ),
+            ),
+          );
+        } else {
+           _showError('ไม่สามารถสร้างรายการได้');
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context);
+        _showError('เกิดข้อผิดพลาด: $e');
+      }
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
   }
 }

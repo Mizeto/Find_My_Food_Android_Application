@@ -48,15 +48,23 @@ class AuthService {
         final data = jsonDecode(response.body);
         print('Login Success: $data');
         
+        final String? token = data['access_token'];
         // Save the token
-        if (data['access_token'] != null) {
-          await _saveToken(data['access_token']);
+        if (token != null) {
+          await _saveToken(token);
         }
         
         // Extract user data from the 'data' field
         final userData = data['data'] as Map<String, dynamic>? ?? {};
         
+        // Try to get ID from token if not in userData
+        int? userId = int.tryParse(userData['user_id']?.toString() ?? '');
+        if (userId == null && token != null) {
+          userId = _extractIdFromToken(token);
+        }
+        
         return {
+          'user_id': userId ?? 0,
           'username': userData['username'] ?? username,
           'email': userData['email'] ?? 'user@example.com',
           'first_name': userData['first_name'],
@@ -64,7 +72,7 @@ class AuthService {
           'gender': userData['gender'],
           'age': userData['age'],
           'profile_image': userData['image_url'],
-          'token': data['access_token'],
+          'token': token,
         };
       } else {
         print('Login Failed: ${response.statusCode} ${response.body}');
@@ -80,6 +88,20 @@ class AuthService {
     }
   }
 
+  int? _extractIdFromToken(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+      final payload = parts[1];
+      final normalized = base64.normalize(payload);
+      final decoded = utf8.decode(base64.decode(normalized));
+      final Map<String, dynamic> map = json.decode(decoded);
+      return int.tryParse(map['sub']?.toString() ?? '');
+    } catch (e) {
+      return null;
+    }
+  }
+
   // Register: POST /users/createUser (application/json)
   Future<bool> register({
     required String username,
@@ -88,7 +110,7 @@ class AuthService {
     required String firstName,
     required String lastName,
     required String gender,
-    required int age,
+    required String birthDate, // Changed from age to birthDate (YYYY-MM-DD)
   }) async {
     try {
       final body = {
@@ -98,7 +120,7 @@ class AuthService {
         'first_name': firstName,
         'last_name': lastName,
         'gender': gender,
-        'age': age,
+        'birth_date': birthDate,
       };
 
       final response = await http.post(
