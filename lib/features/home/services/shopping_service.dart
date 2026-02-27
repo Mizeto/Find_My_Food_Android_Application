@@ -12,14 +12,23 @@ class ShoppingService {
     return prefs.getString('auth_token');
   }
 
+  Future<String?> _getGuestUuid() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('guest_uuid');
+  }
+
   Future<Map<String, String>> _getHeaders() async {
     final token = await _getToken();
+    final guestUuid = await _getGuestUuid();
     final headers = {
       'accept': 'application/json',
       'Content-Type': 'application/json',
     };
     if (token != null) {
       headers['Authorization'] = 'Bearer $token';
+    }
+    if (guestUuid != null) {
+      headers['X-Guest-Token'] = guestUuid;
     }
     return headers;
   }
@@ -28,18 +37,13 @@ class ShoppingService {
   Future<List<ShoppingListModel>> getShoppingList(String shoppingType) async {
     try {
       final headers = await _getHeaders();
-      // Debug Token
-      print('Token used: ${headers['Authorization']}');
-
-      final getHeaders = {
-        'accept': 'application/json',
-        if (headers['Authorization'] != null) 'Authorization': headers['Authorization']!,
-      };
+      // Debug Token/Guest UUID
+      print('Headers used: $headers');
 
       print('Fetching shopping list: $baseUrl/shoppingCart/getShoppingList/$shoppingType');
       final response = await http.get(
         Uri.parse('$baseUrl/shoppingCart/getShoppingList/$shoppingType'),
-        headers: getHeaders,
+        headers: headers,
       );
 
       print('GetList Status: ${response.statusCode}');

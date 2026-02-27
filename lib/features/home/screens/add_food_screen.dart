@@ -24,6 +24,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
   
   // Image
   File? _selectedImage;
+  String? _aiGeneratedUrl;
   final ImagePicker _picker = ImagePicker();
 
   // Data
@@ -31,7 +32,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
   
   // Dynamic Lists
   final List<Map<String, dynamic>> _ingredients = [
-    {'name': '', 'qty': '1', 'unit_id': null, 'id': 0}
+    {'name': '', 'qty': '1', 'unit_id': null, 'id': 0, 'main': true}
   ];
   final List<String> _steps = [''];
   
@@ -73,6 +74,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
       if (pickedFile != null) {
          setState(() {
            _selectedImage = File(pickedFile.path);
+           _aiGeneratedUrl = null; // Clear AI URL if user picks local image
          });
       }
     } catch (e) {
@@ -80,9 +82,40 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
     }
   }
 
-  void _addIngredient() {
+  Future<void> _generateImageWithAI() async {
+    if (_nameController.text.isEmpty) {
+      _showErrorDialog('กรุณาระบุชื่อเมนูก่อนสร้างรูปภาพครับ!');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      final prompt = _nameController.text.trim();
+      final url = await _recipeService.generateRecipeImage(prompt);
+      
+      if (url != null) {
+        setState(() {
+          _aiGeneratedUrl = url;
+          _selectedImage = null; // Clear local file if AI generated
+        });
+        if (mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('สร้างรูปภาพด้วย AI สำเร็จ!'), backgroundColor: AppTheme.primaryOrange),
+          );
+        }
+      } else {
+        _showErrorDialog('ขออภัยครับ ไม่สามารถสร้างรูปภาพได้ในขณะนี้');
+      }
+    } catch (e) {
+      _showErrorDialog('เกิดข้อผิดพลาด: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _addIngredient({bool isMain = false}) {
     setState(() {
-      _ingredients.add({'name': '', 'qty': '1', 'unit_id': _units.isNotEmpty ? _units.first.unitId : null, 'id': 0});
+      _ingredients.add({'name': '', 'qty': '1', 'unit_id': _units.isNotEmpty ? _units.first.unitId : null, 'id': 0, 'main': isMain});
     });
   }
 
@@ -106,14 +139,21 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
 
   Future<void> _submitpost() async {
     if (!_formKey.currentState!.validate()) return;
+    
+    if (_selectedImage == null && _aiGeneratedUrl == null) {
+       _showErrorDialog('กรุณาเพิ่มรูปอาหารก่อนบันทึกครับ');
+       return;
+    }
 
     setState(() => _isLoading = true);
 
     try {
       String imageUrl = 'https://placehold.co/600x400.png';
 
-      // 1. Upload Image if selected
-      if (_selectedImage != null) {
+      // 1. Determine Source & Upload if needed
+      if (_aiGeneratedUrl != null) {
+        imageUrl = _aiGeneratedUrl!;
+      } else if (_selectedImage != null) {
         final url = await _recipeService.uploadNewRecipeImage(_selectedImage!.path);
         if (url != null) {
             imageUrl = url;
@@ -129,16 +169,17 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
         'cooking_time_min': int.tryParse(_timeController.text) ?? 15,
         'image_url': imageUrl,
         'is_public': _isPublic,
-        'ingredients': _ingredients.asMap().entries.map((entry) {
-           final unitId = entry.value['unit_id'] ?? (_units.isNotEmpty ? _units.first.unitId : 0);
-           
-           return {
-             'ingredient_id': entry.value['id'] ?? 0, 
-             'quantity': int.tryParse(entry.value['qty'].toString()) ?? 1,
-             'unit_id': unitId, 
-             'ingredient_name': entry.value['name'], 
-           };
-        }).toList(),
+         'ingredients': _ingredients.asMap().entries.map((entry) {
+            final unitId = entry.value['unit_id'] ?? (_units.isNotEmpty ? _units.first.unitId : 0);
+            
+            return {
+              'ingredient_id': entry.value['id'] ?? 0, 
+              'quantity': int.tryParse(entry.value['qty'].toString()) ?? 1,
+              'unit_id': unitId, 
+              'is_main_ingredient': entry.value['main'] == true,
+              // 'ingredient_name': entry.value['name'], // Spec doesn't show it but could be useful
+            };
+         }).toList(),
         'steps': _steps.asMap().entries.map((entry) {
           return {
             'step_no': entry.key + 1,
@@ -170,10 +211,101 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('ข้อผิดพลาด'),
+      builder: (ctx) => AlertDialog(
+        title: const Text('Error'),
         content: Text(message),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('ตกลง'))],
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK')),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIngredientRow(int index, Map<String, dynamic> item) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: item['main'] == true ? AppTheme.primaryOrange.withOpacity(0.3) : Colors.teal.withOpacity(0.2)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(flex: 3, child: Autocomplete<IngredientModel>(
+                    optionsBuilder: (TextEditingValue textEditingValue) async {
+                      if (textEditingValue.text.isEmpty) {
+                        return const Iterable<IngredientModel>.empty();
+                      }
+                      final results = await _recipeService.getIngredientByNameSearch(textEditingValue.text);
+                      return results;
+                    },
+                    displayStringForOption: (option) => option.ingredientName,
+                    onSelected: (option) {
+                       setState(() {
+                         item['name'] = option.ingredientName;
+                         item['id'] = option.ingredientId;
+                       });
+                    },
+                    fieldViewBuilder: (context, textController, focusNode, onFieldSubmitted) {
+                      if (textController.text.isEmpty && item['name'].toString().isNotEmpty) {
+                        textController.text = item['name'];
+                      }
+                      return TextFormField(
+                        controller: textController,
+                        focusNode: focusNode,
+                        onChanged: (val) {
+                          item['name'] = val;
+                          item['id'] = 0;
+                        },
+                        decoration: const InputDecoration(
+                          hintText: 'ค้นหาวัตถุดิบ...',
+                          prefixIcon: Icon(Icons.search, size: 20),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 10),
+                          border: UnderlineInputBorder(),
+                        ),
+                      );
+                    },
+                )),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: () => _removeIngredient(index), 
+                  icon: const Icon(Icons.delete_outline, color: Colors.red)
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(flex: 1, child: TextFormField(
+                    initialValue: item['qty'].toString(),
+                    onChanged: (val) => item['qty'] = val,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(hintText: 'จำนวน', contentPadding: EdgeInsets.symmetric(horizontal: 10)),
+                )),
+                const SizedBox(width: 8),
+                Expanded(flex: 2, child: DropdownButtonFormField<int>(
+                    isExpanded: true,
+                    value: item['unit_id'],
+                    decoration: const InputDecoration(hintText: 'หน่วย', contentPadding: EdgeInsets.symmetric(horizontal: 10)),
+                    items: _units.map((u) => DropdownMenuItem(value: u.unitId, child: Text(u.unitName, style: const TextStyle(fontSize: 14), overflow: TextOverflow.ellipsis))).toList(),
+                    onChanged: (val) => setState(() => item['unit_id'] = val),
+                    validator: (val) => val == null ? 'เลือก' : null,
+                )),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -192,32 +324,6 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Image Picker
-              GestureDetector(
-                onTap: () {
-                    showModalBottomSheet(context: context, builder: (_) => Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                            ListTile(leading: const Icon(Icons.camera), title: const Text('ถ่ายรูป'), onTap: () { Navigator.pop(context); _pickImage(ImageSource.camera); }),
-                            ListTile(leading: const Icon(Icons.photo), title: const Text('เลือกจากอัลบั้ม'), onTap: () { Navigator.pop(context); _pickImage(ImageSource.gallery); }),
-                        ]
-                    ));
-                },
-                child: Container(
-                  height: 200,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(20),
-                    image: _selectedImage != null ? DecorationImage(image: FileImage(_selectedImage!), fit: BoxFit.cover) : null,
-                  ),
-                  child: _selectedImage == null ? const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [Icon(Icons.add_a_photo, size: 50, color: Colors.grey), SizedBox(height: 8), Text('เพิ่มรูปอาหาร')],
-                  ) : null,
-                ),
-              ),
-              const SizedBox(height: 24),
-
               // Basic Info
               const Text('ข้อมูลทั่วไป', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
@@ -248,107 +354,29 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
 
               const Divider(height: 40),
 
-              // Ingredients
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                   const Text('วัตถุดิบ 🥦', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                   IconButton(onPressed: _addIngredient, icon: const Icon(Icons.add_circle, color: AppTheme.primaryGreen)),
-                ],
-              ),
-              ..._ingredients.asMap().entries.map((entry) {
-                  int index = entry.key;
-                  Map<String, dynamic> item = entry.value;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
-                    child: Row(
-                        children: [
-                            Expanded(flex: 3, child: Autocomplete<IngredientModel>(
-                                optionsBuilder: (TextEditingValue textEditingValue) async {
-                                  if (textEditingValue.text.isEmpty) {
-                                    return const Iterable<IngredientModel>.empty();
-                                  }
-                                  final results = await _recipeService.getIngredientByNameSearch(textEditingValue.text);
-                                  print('Ingredient search for "${textEditingValue.text}": ${results.length} found');
-                                  return results;
-                                },
-                                displayStringForOption: (option) => option.ingredientName,
-                                onSelected: (option) {
-                                   print('Selected ingredient: ${option.ingredientName} (ID: ${option.ingredientId})');
-                                   setState(() {
-                                     item['name'] = option.ingredientName;
-                                     item['id'] = option.ingredientId;
-                                   });
-                                },
-                                fieldViewBuilder: (context, textController, focusNode, onFieldSubmitted) {
-                                  // Initial sync if controller is empty but state has data
-                                  if (textController.text.isEmpty && item['name'].toString().isNotEmpty) {
-                                    textController.text = item['name'];
-                                  }
+               // Ingredients Section
+               Row(
+                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                 children: [
+                    const Text('วัตถุดิบหลัก', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryOrange)),
+                    IconButton(onPressed: () => _addIngredient(isMain: true), icon: const Icon(Icons.add_circle, color: AppTheme.primaryOrange)),
+                 ],
+               ),
+               ..._ingredients.asMap().entries.where((e) => e.value['main'] == true).map((entry) {
+                   return _buildIngredientRow(entry.key, entry.value);
+               }),
 
-                                  return TextFormField(
-                                    controller: textController,
-                                    focusNode: focusNode,
-                                    onChanged: (val) {
-                                      item['name'] = val;
-                                      item['id'] = 0; // Reset ID if user types manually
-                                    },
-                                    decoration: const InputDecoration(
-                                      hintText: 'ค้นหาวัตถุดิบ...',
-                                      prefixIcon: Icon(Icons.search, size: 20),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 10),
-                                      border: UnderlineInputBorder(),
-                                    ),
-                                  );
-                                },
-                                optionsViewBuilder: (context, onSelected, options) {
-                                  return Align(
-                                    alignment: Alignment.topLeft,
-                                    child: Material(
-                                      elevation: 8.0,
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Container(
-                                        width: MediaQuery.of(context).size.width * 0.6,
-                                        constraints: const BoxConstraints(maxHeight: 250),
-                                        child: ListView.builder(
-                                          padding: EdgeInsets.zero,
-                                          shrinkWrap: true,
-                                          itemCount: options.length,
-                                          itemBuilder: (BuildContext context, int index) {
-                                            final option = options.elementAt(index);
-                                            return ListTile(
-                                              leading: const Icon(Icons.add, size: 18),
-                                              title: Text(option.ingredientName),
-                                              onTap: () => onSelected(option),
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                            )),
-                            const SizedBox(width: 8),
-                            Expanded(flex: 1, child: TextFormField(
-                                initialValue: item['qty'].toString(),
-                                onChanged: (val) => item['qty'] = val,
-                                keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(hintText: 'จำนวน'),
-                            )),
-                            const SizedBox(width: 8),
-                            Expanded(flex: 2, child: DropdownButtonFormField<int>(
-                                isExpanded: true,
-                                value: item['unit_id'],
-                                decoration: const InputDecoration(hintText: 'หน่วย', contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 0)),
-                                items: _units.map((u) => DropdownMenuItem(value: u.unitId, child: Text(u.unitName, style: const TextStyle(fontSize: 14), overflow: TextOverflow.ellipsis))).toList(),
-                                onChanged: (val) => setState(() => item['unit_id'] = val),
-                                validator: (val) => val == null ? 'เลือก' : null,
-                            )),
-                            IconButton(onPressed: () => _removeIngredient(index), icon: const Icon(Icons.remove_circle_outline, color: Colors.red)),
-                        ],
-                    ),
-                  );
-              }),
+               const SizedBox(height: 16),
+               Row(
+                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                 children: [
+                    const Text('วัตถุดิบย่อย / เครื่องปรุง', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal)),
+                    IconButton(onPressed: () => _addIngredient(isMain: false), icon: const Icon(Icons.add_circle, color: Colors.teal)),
+                 ],
+               ),
+               ..._ingredients.asMap().entries.where((e) => e.value['main'] != true).map((entry) {
+                   return _buildIngredientRow(entry.key, entry.value);
+               }),
 
               const Divider(height: 40),
 
@@ -380,6 +408,44 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                     ),
                   );
               }),
+              
+              const Divider(height: 40),
+
+              GestureDetector(
+                onTap: () {
+                    showModalBottomSheet(context: context, builder: (_) => Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                            ListTile(leading: const Icon(Icons.camera), title: const Text('ถ่ายรูป'), onTap: () { Navigator.pop(context); _pickImage(ImageSource.camera); }),
+                            ListTile(leading: const Icon(Icons.photo), title: const Text('เลือกจากอัลบั้ม'), onTap: () { Navigator.pop(context); _pickImage(ImageSource.gallery); }),
+                            ListTile(
+                              leading: const Icon(Icons.auto_awesome, color: AppTheme.primaryOrange), 
+                              title: const Text('สร้างรูปด้วย AI ✨', style: TextStyle(color: AppTheme.primaryOrange, fontWeight: FontWeight.bold)), 
+                              onTap: () { 
+                                Navigator.pop(context); 
+                                _generateImageWithAI(); 
+                              }
+                            ),
+                        ]
+                    ));
+                },
+                child: Container(
+                  height: 200,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(20),
+                    image: _selectedImage != null 
+                        ? DecorationImage(image: FileImage(_selectedImage!), fit: BoxFit.cover) 
+                        : (_aiGeneratedUrl != null 
+                            ? DecorationImage(image: NetworkImage(_aiGeneratedUrl!), fit: BoxFit.cover)
+                            : null),
+                  ),
+                  child: (_selectedImage == null && _aiGeneratedUrl == null) ? const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [Icon(Icons.add_a_photo, size: 50, color: Colors.grey), SizedBox(height: 8), Text('เพิ่มรูปอาหาร')],
+                  ) : (_isLoading ? const Center(child: CircularProgressIndicator()) : null),
+                ),
+              ),
               
               const SizedBox(height: 40),
               

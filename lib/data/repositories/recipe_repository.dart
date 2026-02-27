@@ -31,6 +31,7 @@ class RecipeRepository {
           cookingMethod: method,
           imageUrl: apiRecipe.imageUrl,
           prepTime: apiRecipe.cookingTimeMin, // Use actual time from API
+          likeCount: apiRecipe.likeCount, // Add this
         );
       }).toList();
 
@@ -57,6 +58,7 @@ class RecipeRepository {
             quantity: ing.quantityValue,
             unitId: ing.unitId,
             unitName: ing.unitName,
+            isMainIngredient: ing.isMainIngredient,
           )).toList();
        }
 
@@ -67,6 +69,7 @@ class RecipeRepository {
           cookingMethod: method,
           imageUrl: apiRecipe.imageUrl,
           prepTime: apiRecipe.cookingTimeMin,
+          likeCount: apiRecipe.likeCount, // Add this
           ingredients: ingredientItems,
        );
     } catch (e) {
@@ -94,5 +97,46 @@ class RecipeRepository {
   }
   Future<List<UnitModel>> getUnits() async {
     return _recipeService.getAllUnits();
+  }
+
+  Future<bool> addUserStock(UserStockRequest request) async {
+    return _recipeService.addUserStock(request);
+  }
+
+  Future<List<Recipe>> getRecommendFromStock() async {
+    try {
+      final apiRecipes = await _recipeService.getRecommendRecipeFromStock();
+      return _mapRecipes(apiRecipes);
+    } catch (e) {
+      throw Exception('Error loading recommendations from stock: $e');
+    }
+  }
+
+  Future<List<Recipe>> getRecommendForYou() async {
+    try {
+      final apiRecipes = await _recipeService.getRecommendRecipeForYou();
+      return _mapRecipes(apiRecipes);
+    } catch (e) {
+      throw Exception('Error loading recommendations for you: $e');
+    }
+  }
+
+  List<Recipe> _mapRecipes(List<RecipeModel> apiRecipes) {
+    return apiRecipes.map((apiRecipe) {
+      String method = 'ดูวิธีทำได้ที่ร้านค้าหรือวิดีโอแนะนำ';
+      if (apiRecipe.steps != null && apiRecipe.steps!.isNotEmpty) {
+        method = apiRecipe.steps!.map((s) => '${s.stepNo}. ${s.instruction}').join('\n');
+      }
+
+      return Recipe(
+        id: apiRecipe.recipeId,
+        title: apiRecipe.recipeName,
+        description: apiRecipe.description.isNotEmpty ? apiRecipe.description : 'ไม่มีคำอธิบาย',
+        cookingMethod: method,
+        imageUrl: apiRecipe.imageUrl,
+        prepTime: apiRecipe.cookingTimeMin,
+        likeCount: apiRecipe.likeCount, // Add this
+      );
+    }).toList();
   }
 }

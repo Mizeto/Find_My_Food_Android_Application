@@ -310,14 +310,27 @@ class RecipeService {
       final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
-        if (jsonResponse['status'] == 'success') {
-          return DishAIResponse.fromJson(jsonResponse['data']);
+        final decodedBody = utf8.decode(response.bodyBytes);
+        print('Dish AI Raw Response: $decodedBody');
+        
+        final dynamic jsonResponse = jsonDecode(decodedBody);
+        
+        // Handle both {status: "success", data: ...} and raw data formats
+        if (jsonResponse is Map<String, dynamic> && jsonResponse.containsKey('status')) {
+          if (jsonResponse['status'] == 'success') {
+             final data = jsonResponse['data'];
+             return DishAIResponse.fromJson(data);
+          } else {
+             throw Exception(jsonResponse['message'] ?? 'AI Prediction failed');
+          }
         } else {
-          throw Exception(jsonResponse['message'] ?? 'AI Prediction failed');
+          // Assume raw data directly
+          return DishAIResponse.fromJson(jsonResponse);
         }
       } else {
-        throw Exception('Failed to predict: ${response.statusCode}');
+        final errorBody = utf8.decode(response.bodyBytes);
+        print('Dish AI Failed Response: $errorBody');
+        throw Exception('Failed to predict: ${response.statusCode} - $errorBody');
       }
     } catch (e) {
       print('Error during Dish AI: $e');
@@ -408,6 +421,111 @@ class RecipeService {
     } catch (e) {
       print('Error unliking recipe: $e');
       throw Exception('Connection error: $e');
+    }
+  }
+
+  // POST /userStock/addUserStock
+  Future<bool> addUserStock(UserStockRequest request) async {
+    try {
+      final headers = await _getHeaders();
+      print('Adding user stock: $baseUrl/userStock/addUserStock');
+      final response = await http.post(
+        Uri.parse('$baseUrl/userStock/addUserStock'),
+        headers: headers,
+        body: jsonEncode(request.toJson()),
+      );
+
+      print('Add User Stock Response: ${response.statusCode} ${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final jsonResponse = jsonDecode(response.body);
+        return jsonResponse['status'] == 'success';
+      }
+      return false;
+    } catch (e) {
+      print('Error adding user stock: $e');
+      throw Exception('Connection error: $e');
+    }
+  }
+
+  // GET /recipe/getRecommendRecipeFromStock
+  Future<List<RecipeModel>> getRecommendRecipeFromStock() async {
+    try {
+      final headers = await _getHeaders();
+      print('Fetching recommend recipes from stock: $baseUrl/recipe/getRecommendRecipeFromStock');
+      final response = await http.get(
+        Uri.parse('$baseUrl/recipe/getRecommendRecipeFromStock'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
+        if (jsonResponse['status'] == 'success') {
+          final List<dynamic> data = jsonResponse['data'];
+          return data.map((json) => RecipeModel.fromJson(json)).toList();
+        } else {
+          return [];
+        }
+      } else {
+        throw Exception('Failed to load recommend recipes from stock: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching recommend recipes from stock: $e');
+      throw Exception('Connection error: $e');
+    }
+  }
+
+  // GET /recipe/getRecommendRecipeForYou
+  Future<List<RecipeModel>> getRecommendRecipeForYou() async {
+    try {
+      final headers = await _getHeaders();
+      print('Fetching recommend recipes for you: $baseUrl/recipe/getRecommendRecipeForYou');
+      final response = await http.get(
+        Uri.parse('$baseUrl/recipe/getRecommendRecipeForYou'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
+        if (jsonResponse['status'] == 'success') {
+          final List<dynamic> data = jsonResponse['data'];
+          return data.map((json) => RecipeModel.fromJson(json)).toList();
+        } else {
+          return [];
+        }
+      } else {
+        throw Exception('Failed to load recommend recipes for you: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching recommend recipes for you: $e');
+      throw Exception('Connection error: $e');
+    }
+  }
+
+  // POST /recipeAI/generateRecipeImage
+  Future<String?> generateRecipeImage(String prompt) async {
+    try {
+      print('Generating recipe image with AI: $baseUrl/recipeAI/generateRecipeImage');
+      final headers = await _getHeaders();
+      
+      final response = await http.post(
+        Uri.parse('$baseUrl/recipeAI/generateRecipeImage'),
+        headers: headers,
+        body: jsonEncode({
+          'prompt': prompt,
+        }),
+      ).timeout(const Duration(seconds: 90));
+
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
+        if (jsonResponse['status'] == 'success') {
+          return jsonResponse['data']; // Returns the URL of the generated image
+        }
+      }
+      print('Image Gen Error: ${response.statusCode} - ${response.body}');
+      return null;
+    } catch (e) {
+      print('Error generating image: $e');
+      return null;
     }
   }
 }

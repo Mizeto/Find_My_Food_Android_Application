@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../cubit/auth_cubit.dart';
 import 'register_screen.dart';
-import 'register_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -216,7 +216,26 @@ class _LoginFormState extends State<_LoginForm> {
                 validator: (value) =>
                     (value == null || value.isEmpty) ? 'กรุณากรอกรหัสผ่าน' : null,
               ),
-              const SizedBox(height: 24),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: isLoading
+                      ? null
+                      : () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const ForgotPasswordScreen(),
+                            ),
+                          );
+                        },
+                  child: const Text(
+                    'ลืมรหัสผ่าน?',
+                    style: TextStyle(color: Color(0xFFFF6B35)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,
                 height: 50,

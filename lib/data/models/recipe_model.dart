@@ -5,6 +5,7 @@ class RecipeIngredientItem {
   final double quantity;
   final int unitId;
   final String unitName;
+  final bool isMainIngredient;
 
   RecipeIngredientItem({
     required this.ingredientId,
@@ -12,6 +13,7 @@ class RecipeIngredientItem {
     required this.quantity,
     required this.unitId,
     required this.unitName,
+    this.isMainIngredient = false,
   });
 }
 
@@ -22,7 +24,8 @@ class Recipe {
   final String cookingMethod;
   final String imageUrl;
   final int prepTime;
-  final List<RecipeIngredientItem>? ingredients; // เพิ่ม ingredients
+  final int likeCount; // Add likeCount
+  final List<RecipeIngredientItem>? ingredients;
 
   Recipe({
     required this.id,
@@ -31,20 +34,22 @@ class Recipe {
     required this.cookingMethod,
     required this.imageUrl,
     required this.prepTime,
+    this.likeCount = 0, // default 0
     this.ingredients, // optional
   });
 
   factory Recipe.fromJson(Map<String, dynamic> json) {
     return Recipe(
       id: json['recipe_id'] ?? 0,
-      title: json['title'] ?? '',
-      description: json['description'] ?? '',
-      cookingMethod: json['cooking_method'] ?? 'ไม่มีข้อมูลวิธีทำ',
+      title: json['title']?.toString() ?? json['recipe_name']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      cookingMethod: json['cooking_method']?.toString() ?? 'ไม่มีข้อมูลวิธีทำ',
       imageUrl: _fixImageUrl(
-        json['image_url'] ?? 'https://placehold.co/600x400.png',
+        json['image_url']?.toString() ?? 'https://placehold.co/600x400.png',
       ),
-      prepTime: json['prep_time'] ?? 0,
-      ingredients: null, // fromJson is for simple cases, use repository for full detail
+      prepTime: (json['prep_time'] as num?)?.toInt() ?? (json['cooking_time_min'] as num?)?.toInt() ?? 0,
+      likeCount: (json['like_count'] as num?)?.toInt() ?? 0, 
+      ingredients: null,
     );
   }
 

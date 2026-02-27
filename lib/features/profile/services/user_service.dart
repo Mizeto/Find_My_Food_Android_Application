@@ -28,58 +28,25 @@ class UserService {
 
   // 1. GET User Profile - Trying multiple possible endpoints (expanded probe)
   Future<UserModel?> getUserProfile({int? userId, String? username}) async {
-    final endpoints = [
-       if (userId != null && userId != 0) '/users/$userId',
-       if (userId != null && userId != 0) '/users/getUser/$userId',
-       if (userId != null && userId != 0) '/users/getUserProfileById/$userId',
-       if (username != null) '/users/$username',
-       '/users/me',
-       '/users/profile',
-       '/users/getUserProfile',
-       '/users/getSimpleUserInfo',
-       '/usersme',
-       '/usersprofile',
-       '/usersgetUserProfile',
-       '/usersgetSimpleUserInfo',
-       '/auth/me',
-       '/auth/profile',
-       '/me',
-       '/profile',
-       '/users', // No slash
-       '/users/', // With slash
-    ];
+    try {
+      final headers = await _getHeaders();
+      // The user log confirmed /usersgetSimpleUserInfo is the working endpoint
+      final url = '$baseUrl/usersgetSimpleUserInfo';
+      print('DEBUG: Fetching profile from stable endpoint: $url');
+      final response = await http.get(Uri.parse(url), headers: headers);
 
-    for (final path in endpoints) {
-      try {
-        final headers = await _getHeaders();
-        final url = '$baseUrl$path';
-        print('DEBUG: Trying to fetch profile from: $url');
-        final response = await http.get(Uri.parse(url), headers: headers).timeout(const Duration(seconds: 5));
-
-        if (response.statusCode == 200) {
-          final jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
-          print('DEBUG: Response from $path: $jsonResponse');
-          
-          final data = (jsonResponse['data'] != null && jsonResponse['data'] is Map) 
-              ? jsonResponse['data'] 
-              : jsonResponse;
-              
-          // Check if this looks like user data (should have username or email)
-          if (data is Map<String, dynamic> && (data.containsKey('username') || data.containsKey('email'))) {
-             final user = UserModel.fromJson(data);
-             // If ID is valid or we have username, it's likely correct
-             if (user.id != 0 || (user.username != 'User' && user.username.isNotEmpty)) {
-                print('DEBUG: SUCCESS! Found correct profile endpoint: $path');
-                return user;
-             }
-          }
-          print('DEBUG: Data from $path did not match UserModel structure');
-        } else if (response.statusCode != 404) {
-          print('DEBUG: $path returned status: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
+        final data = (jsonResponse['data'] != null && jsonResponse['data'] is Map) 
+            ? jsonResponse['data'] 
+            : jsonResponse;
+            
+        if (data is Map<String, dynamic>) {
+           return UserModel.fromJson(data);
         }
-      } catch (e) {
-        // Silently continue for probe
       }
+    } catch (e) {
+      print('Error getting user profile: $e');
     }
     return null;
   }

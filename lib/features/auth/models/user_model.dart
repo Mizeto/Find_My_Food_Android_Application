@@ -12,6 +12,7 @@ class UserModel extends Equatable {
   final DateTime? birthDate;
   final String? profileImage;
   final LoginType loginType;
+  final String? guestUuid; // UUID4 for guest identification
 
   const UserModel({
     required this.id,
@@ -23,6 +24,7 @@ class UserModel extends Equatable {
     this.birthDate,
     this.profileImage,
     required this.loginType,
+    this.guestUuid,
   });
 
   bool get isGuest => loginType == LoginType.guest;
@@ -59,6 +61,7 @@ class UserModel extends Equatable {
               orElse: () => LoginType.email,
             )
           : LoginType.email,
+      guestUuid: json['guest_uuid'],
     );
   }
 
@@ -74,16 +77,18 @@ class UserModel extends Equatable {
       'birth_date': birthDate?.toIso8601String().split('T')[0],
       'profile_image': profileImage,
       'loginType': loginType.name,
+      'guest_uuid': guestUuid,
     };
   }
 
   // Guest user factory
-  factory UserModel.guest() {
-    return const UserModel(
+  factory UserModel.guest({required String uuid}) {
+    return UserModel(
       id: -1,
       username: 'ผู้เยี่ยมชม',
       email: '',
       loginType: LoginType.guest,
+      guestUuid: uuid,
     );
   }
 
@@ -98,6 +103,7 @@ class UserModel extends Equatable {
     DateTime? birthDate,
     String? profileImage,
     LoginType? loginType,
+    String? guestUuid,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -109,9 +115,10 @@ class UserModel extends Equatable {
       birthDate: birthDate ?? this.birthDate,
       profileImage: profileImage ?? this.profileImage,
       loginType: loginType ?? this.loginType,
+      guestUuid: guestUuid ?? this.guestUuid,
     );
   }
 
   @override
-  List<Object?> get props => [id, username, email, firstName, lastName, gender, birthDate, profileImage, loginType];
+  List<Object?> get props => [id, username, email, firstName, lastName, gender, birthDate, profileImage, loginType, guestUuid];
 }

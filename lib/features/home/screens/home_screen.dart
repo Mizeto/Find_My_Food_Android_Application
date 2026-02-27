@@ -7,6 +7,7 @@ import '../../../core/theme/theme_cubit.dart';
 import '../../auth/cubit/auth_cubit.dart';
 import 'recipe_detail_screen.dart';
 import 'add_food_screen.dart';
+import '../widgets/recipe_card.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -123,47 +124,77 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
 
-          // Recipe List
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: BlocBuilder<HomeBloc, HomeState>(
+          // Recipe Content
+          SliverToBoxAdapter(
+            child: BlocBuilder<HomeBloc, HomeState>(
               builder: (context, state) {
                 if (state is HomeLoading) {
-                  return SliverToBoxAdapter(
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: _buildLoadingShimmer(isDarkMode),
                   );
                 }
 
                 if (state is HomeError) {
-                  return SliverToBoxAdapter(
-                    child: _buildErrorWidget(state.message),
-                  );
+                  return _buildErrorWidget(state.message);
                 }
 
                 if (state is HomeLoaded) {
-                  if (state.recipes.isEmpty) {
-                    return SliverToBoxAdapter(
-                      child: _buildEmptyWidget(),
-                    );
-                  }
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 1. Recommended for You (Horizontal)
+                      if (state.recommendedForYou.isNotEmpty)
+                        _buildHorizontalSection(
+                          context: context,
+                          title: 'แนะนำสำหรับคุณ ✨',
+                          recipes: state.recommendedForYou,
+                          isDarkMode: isDarkMode,
+                        ),
 
-                  return SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final recipe = state.recipes[index];
-                        return RecipeCard(
-                          recipe: recipe,
-                          index: index,
-                        );
-                      },
-                      childCount: state.recipes.length,
-                    ),
+                      // 2. Based on Stock (Horizontal)
+                      if (state.recommendedFromStock.isNotEmpty)
+                        _buildHorizontalSection(
+                          context: context,
+                          title: 'เมนูจากของที่มี 🥦',
+                          recipes: state.recommendedFromStock,
+                          isDarkMode: isDarkMode,
+                        ),
+
+                      // 3. Main List Title
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+                        child: Text(
+                          state.recipes.isEmpty ? '' : 'ค้นหาเมนูอร่อย 🍳',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+
+                      if (state.recipes.isEmpty)
+                        _buildEmptyWidget()
+                      else
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: state.recipes.length,
+                            itemBuilder: (context, index) {
+                              return RecipeCard(
+                                recipe: state.recipes[index],
+                                index: index,
+                              );
+                            },
+                          ),
+                        ),
+                    ],
                   );
                 }
 
-                return SliverToBoxAdapter(
-                  child: _buildInitialWidget(),
-                );
+                return _buildInitialWidget();
               },
             ),
           ),
@@ -326,6 +357,53 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildHorizontalSection({
+    required BuildContext context,
+    required String title,
+    required List<Recipe> recipes,
+    required bool isDarkMode,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              TextButton(
+                onPressed: () {}, // View all functionality
+                child: const Text(
+                  'ดูทั้งหมด',
+                  style: TextStyle(color: AppTheme.primaryOrange),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 240,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            itemCount: recipes.length,
+            itemBuilder: (context, index) {
+              final recipe = recipes[index];
+              return _RecommendationCard(recipe: recipe, isDarkMode: isDarkMode);
+            },
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 // Shimmer Loading Card
@@ -390,208 +468,106 @@ class _ShimmerCardState extends State<_ShimmerCard>
   }
 }
 
-// Recipe Card with Hero Animation
-class RecipeCard extends StatelessWidget {
-  final Recipe recipe;
-  final int index;
 
-  const RecipeCard({super.key, required this.recipe, required this.index});
+// Recommendation Card for Horizontal List
+class _RecommendationCard extends StatelessWidget {
+  final Recipe recipe;
+  final bool isDarkMode;
+
+  const _RecommendationCard({required this.recipe, required this.isDarkMode});
 
   @override
   Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: Duration(milliseconds: 300 + (index * 100)),
-      curve: Curves.easeOutCubic,
-      builder: (context, value, child) {
-        return Transform.translate(
-          offset: Offset(0, 30 * (1 - value)),
-          child: Opacity(
-            opacity: value,
-            child: child,
-          ),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => RecipeDetailScreen(recipe: recipe)),
         );
       },
-      child: GestureDetector(
-        onTap: () {
-          Navigator.push(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (context, animation, secondaryAnimation) =>
-                  RecipeDetailScreen(recipe: recipe),
-              transitionsBuilder:
-                  (context, animation, secondaryAnimation, child) {
-                return FadeTransition(
-                  opacity: animation,
-                  child: child,
-                );
-              },
-              transitionDuration: const Duration(milliseconds: 300),
-            ),
-          );
-        },
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 20),
-          child: Card(
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Image with Hero
-                Hero(
-                  tag: 'recipe-image-${recipe.id}',
-                  child: Stack(
-                    children: [
-                      Image.network(
-                        recipe.imageUrl,
-                        height: 200,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            height: 200,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  Colors.grey[300]!,
-                                  Colors.grey[200]!,
-                                ],
-                              ),
-                            ),
-                            child: const Center(
-                              child: Icon(Icons.broken_image,
-                                  size: 50, color: Colors.grey),
-                            ),
-                          );
-                        },
-                      ),
-                      // Gradient overlay
-                      Positioned.fill(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.transparent,
-                                Colors.black.withValues(alpha: 0.3),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      // Time badge
-                      Positioned(
-                        top: 12,
-                        right: 12,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.9),
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.1),
-                                blurRadius: 8,
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.access_time,
-                                size: 14,
-                                color: AppTheme.primaryOrange,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${recipe.prepTime} นาที',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.primaryOrange,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
+      child: Container(
+        width: 200,
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        child: Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
+                children: [
+                   Image.network(
+                    recipe.imageUrl,
+                    height: 130,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      height: 130,
+                      color: Colors.grey[200],
+                      child: const Icon(Icons.broken_image, color: Colors.grey),
+                    ),
                   ),
-                ),
-
-                // Content
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        recipe.title,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        recipe.description,
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          height: 1.4,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primaryGreen.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.restaurant,
-                                  size: 14,
-                                  color: AppTheme.primaryGreen,
-                                ),
-                                SizedBox(width: 4),
-                                Text(
-                                  'ดูสูตร',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppTheme.primaryGreen,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Spacer(),
-                          Icon(
-                            Icons.arrow_forward_ios,
-                            size: 16,
-                            color: Colors.grey[400],
-                          ),
-                        ],
-                      ),
-                    ],
+                      child: const Icon(Icons.favorite_border, size: 16, color: Colors.red),
+                    ),
                   ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      recipe.title,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.timer_outlined, size: 14, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${recipe.prepTime} นาที',
+                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.favorite, size: 14, color: Colors.red),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${recipe.likeCount}',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryOrange.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.add, size: 16, color: AppTheme.primaryOrange),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

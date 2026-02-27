@@ -14,8 +14,17 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<LoadHomeRecipes>((event, emit) async {
       emit(HomeLoading());
       try {
-        final recipes = await repository.getRecipes();
-        emit(HomeLoaded(recipes));
+        final results = await Future.wait([
+          repository.getRecipes(),
+          repository.getRecommendForYou(),
+          repository.getRecommendFromStock(),
+        ]);
+
+        emit(HomeLoaded(
+          recipes: results[0] as List<Recipe>,
+          recommendedForYou: results[1] as List<Recipe>,
+          recommendedFromStock: results[2] as List<Recipe>,
+        ));
       } catch (e) {
         emit(HomeError(e.toString()));
       }
@@ -25,9 +34,9 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<SearchRecipes>((event, emit) async {
       emit(HomeLoading()); // หมุนติ้วๆ
       try {
-        // ส่งคำค้นหา (event.query) ไปให้ Repository
+        // เมื่อค้นหา เราจะแสดงเฉพาะผลการค้นหา (หรืออาจจะเก็บ Recommend ไว้ก็ได้ แต่ในที่นี้ขอแสดงเฉพาะผลค้นหาเพื่อความเคลียร์)
         final recipes = await repository.getRecipes(search: event.query);
-        emit(HomeLoaded(recipes));
+        emit(HomeLoaded(recipes: recipes));
       } catch (e) {
         emit(HomeError(e.toString()));
       }

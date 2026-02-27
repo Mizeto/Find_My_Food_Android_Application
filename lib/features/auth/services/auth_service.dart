@@ -46,7 +46,12 @@ class AuthService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print('Login Success: $data');
+        print('Login Response: $data');
+        
+        // Check the body-level status (server returns 200 even on failure)
+        if (data['status'] == 'fail') {
+          throw Exception(data['message'] ?? 'เข้าสู่ระบบไม่สำเร็จ');
+        }
         
         final String? token = data['access_token'];
         // Save the token
@@ -78,12 +83,13 @@ class AuthService {
         print('Login Failed: ${response.statusCode} ${response.body}');
         try {
           final error = jsonDecode(response.body);
-          throw Exception(error['detail'] ?? 'Login failed');
+          throw Exception(error['detail'] ?? error['message'] ?? 'Login failed');
         } catch (_) {
           throw Exception('Login failed: ${response.statusCode}');
         }
       }
     } catch (e) {
+      if (e is Exception && !e.toString().contains('Connection error')) rethrow;
       throw Exception('Connection error: $e');
     }
   }
@@ -269,6 +275,97 @@ class AuthService {
         }
       }
     } catch (e) {
+      throw Exception('Connection error: $e');
+    }
+  }
+
+  // ──────────── Feedback ────────────
+
+  /// POST /support/feedback/submit
+  Future<bool> submitFeedback({required String title, required String detail}) async {
+    try {
+      final token = await getToken();
+      print('DEBUG submitFeedback: token=${token != null ? "YES (${token.length} chars)" : "NULL"}');
+      final response = await http.post(
+        Uri.parse('$baseUrl/support/feedback/submit'),
+        headers: {
+          'Content-Type': 'application/json',
+          'accept': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'title': title, 'detail': detail}),
+      );
+      print('Feedback Response: ${response.statusCode} ${response.body}');
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      throw Exception('Connection error: $e');
+    }
+  }
+
+  // ──────────── Forgot Password ────────────
+
+  /// POST /auth/forgetPassword/requestOTP
+  Future<bool> requestPasswordOTP(String email) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/forgetPassword/requestOTP'),
+        headers: {
+          'Content-Type': 'application/json',
+          'accept': 'application/json',
+        },
+        body: jsonEncode({'email': email}),
+      );
+      print('Request OTP Response: ${response.statusCode} ${response.body}');
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      throw Exception('Connection error: $e');
+    }
+  }
+
+  /// POST /auth/forgetPassword/verifyOTP
+  Future<bool> verifyPasswordOTP(String email, String otp) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/forgetPassword/verifyOTP'),
+        headers: {
+          'Content-Type': 'application/json',
+          'accept': 'application/json',
+        },
+        body: jsonEncode({'email': email, 'otp': otp}),
+      );
+      print('Verify OTP Response: ${response.statusCode} ${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return true;
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(error['detail'] ?? error['message'] ?? 'OTP ไม่ถูกต้อง');
+      }
+    } catch (e) {
+      if (e is Exception && e.toString().contains('OTP')) rethrow;
+      throw Exception('Connection error: $e');
+    }
+  }
+
+  /// POST /auth/forgetPassword/resetPassword
+  Future<bool> resetPassword({required String email, required String otp, required String newPassword}) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/forgetPassword/resetPassword'),
+        headers: {
+          'Content-Type': 'application/json',
+          'accept': 'application/json',
+        },
+        body: jsonEncode({'email': email, 'otp': otp, 'new_password': newPassword}),
+      );
+      print('Reset Password Response: ${response.statusCode} ${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return true;
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(error['detail'] ?? error['message'] ?? 'รีเซ็ตรหัสผ่านไม่สำเร็จ');
+      }
+    } catch (e) {
+      if (e is Exception && !e.toString().contains('Connection error')) rethrow;
       throw Exception('Connection error: $e');
     }
   }

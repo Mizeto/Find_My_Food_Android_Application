@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_cubit.dart';
 import '../../auth/cubit/auth_cubit.dart';
+import '../../auth/services/auth_service.dart';
 import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -28,10 +29,75 @@ class ProfileScreen extends StatelessWidget {
                 child: _ProfileHeader(user: user, isDarkMode: isDarkMode),
               ),
 
-              // Menu Items
-              SliverToBoxAdapter(
-                child: _ProfileMenu(isDarkMode: isDarkMode),
-              ),
+              // Guest Banner: show bind account prompt
+              if (user.isGuest)
+                SliverToBoxAdapter(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFF6B35), Color(0xFFFF8E53)],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFFF6B35).withOpacity(0.3),
+                          blurRadius: 15,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.person_add, color: Colors.white, size: 40),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'คุณกำลังใช้งานแบบผู้เยี่ยมชม',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'เข้าสู่ระบบหรือสมัครสมาชิกเพื่อใช้งานฟีเจอร์ทั้งหมด',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 13,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              context.read<AuthCubit>().signOut();
+                            },
+                            icon: const Icon(Icons.login),
+                            label: const Text('ผูกบัญชี / เข้าสู่ระบบ', style: TextStyle(fontSize: 16)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: const Color(0xFFFF6B35),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              // Menu Items (hide for guests)
+              if (!user.isGuest)
+                SliverToBoxAdapter(
+                  child: _ProfileMenu(isDarkMode: isDarkMode),
+                ),
 
               // Theme Toggle
               SliverToBoxAdapter(
@@ -255,6 +321,8 @@ class _ProfileMenu extends StatelessWidget {
                       builder: (context) => const EditProfileScreen(),
                     ),
                   );
+                } else if (item.title == 'ส่งข้อเสนอแนะ') {
+                  _showFeedbackDialog(context);
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -267,6 +335,162 @@ class _ProfileMenu extends StatelessWidget {
               },
             )),
       ],
+    );
+  }
+
+  void _showFeedbackDialog(BuildContext context) {
+    final titleCtrl = TextEditingController();
+    final detailCtrl = TextEditingController();
+    bool isSending = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          return Container(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom,
+            ),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Row(
+                    children: [
+                      Icon(Icons.feedback_outlined, color: Color(0xFFFF6B35), size: 28),
+                      SizedBox(width: 12),
+                      Text(
+                        'ส่งข้อเสนอแนะ',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: titleCtrl,
+                    enabled: !isSending,
+                    decoration: InputDecoration(
+                      labelText: 'หัวข้อ',
+                      prefixIcon: const Icon(Icons.title),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: detailCtrl,
+                    enabled: !isSending,
+                    maxLines: 4,
+                    decoration: InputDecoration(
+                      labelText: 'รายละเอียด',
+                      alignLabelWithHint: true,
+                      prefixIcon: const Padding(
+                        padding: EdgeInsets.only(bottom: 52),
+                        child: Icon(Icons.description_outlined),
+                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: isSending
+                          ? null
+                          : () async {
+                              final title = titleCtrl.text.trim();
+                              final detail = detailCtrl.text.trim();
+                              if (title.isEmpty || detail.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('กรุณากรอกหัวข้อและรายละเอียด'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
+                              setModalState(() => isSending = true);
+                              try {
+                                final ok = await AuthService().submitFeedback(
+                                  title: title,
+                                  detail: detail,
+                                );
+                                if (ctx.mounted) Navigator.pop(ctx);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Row(
+                                        children: [
+                                          Icon(
+                                            ok ? Icons.check_circle : Icons.error_outline,
+                                            color: Colors.white,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Text(ok
+                                              ? 'ส่งข้อเสนอแนะเรียบร้อยแล้ว ขอบคุณ!'
+                                              : 'ส่งข้อเสนอแนะไม่สำเร็จ'),
+                                        ],
+                                      ),
+                                      backgroundColor: ok ? Colors.green : Colors.red,
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                setModalState(() => isSending = false);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('เกิดข้อผิดพลาด: $e'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF6B35),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: isSending
+                          ? const SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text('ส่งข้อเสนอแนะ', style: TextStyle(fontSize: 16)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }
@@ -373,6 +597,13 @@ class _ThemeToggle extends StatelessWidget {
 class _LogoutButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final isGuest = context.watch<AuthCubit>().isGuest;
+    final labelText = isGuest ? 'เข้าสู่ระบบ' : 'ออกจากระบบ';
+    final dialogTitle = isGuest ? 'เข้าสู่ระบบ' : 'ออกจากระบบ';
+    final dialogContent = isGuest 
+        ? 'คุณต้องการไปที่หน้าเข้าสู่ระบบเพื่อผูกบัญชีหรือไม่?' 
+        : 'คุณต้องการออกจากระบบหรือไม่?';
+
     return Container(
       margin: const EdgeInsets.all(16),
       child: OutlinedButton.icon(
@@ -380,8 +611,8 @@ class _LogoutButton extends StatelessWidget {
           showDialog(
             context: context,
             builder: (context) => AlertDialog(
-              title: const Text('ออกจากระบบ'),
-              content: const Text('คุณต้องการออกจากระบบหรือไม่?'),
+              title: Text(dialogTitle),
+              content: Text(dialogContent),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
@@ -392,20 +623,25 @@ class _LogoutButton extends StatelessWidget {
                     Navigator.pop(context);
                     context.read<AuthCubit>().signOut();
                   },
-                  style: TextButton.styleFrom(foregroundColor: Colors.red),
-                  child: const Text('ออกจากระบบ'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: isGuest ? Colors.blue : Colors.red,
+                  ),
+                  child: Text(dialogTitle),
                 ),
               ],
             ),
           );
         },
-        icon: const Icon(Icons.logout, color: Colors.red),
-        label: const Text(
-          'ออกจากระบบ',
-          style: TextStyle(color: Colors.red),
+        icon: Icon(
+          isGuest ? Icons.login : Icons.logout, 
+          color: isGuest ? Colors.blue : Colors.red,
+        ),
+        label: Text(
+          labelText,
+          style: TextStyle(color: isGuest ? Colors.blue : Colors.red),
         ),
         style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: Colors.red),
+          side: BorderSide(color: isGuest ? Colors.blue : Colors.red),
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),

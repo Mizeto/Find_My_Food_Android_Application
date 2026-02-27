@@ -136,54 +136,175 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final oldPassController = TextEditingController();
     final newPassController = TextEditingController();
     final confirmPassController = TextEditingController();
-    
-    await showDialog(
+    bool isOldVisible = false;
+    bool isNewVisible = false;
+    bool isConfirmVisible = false;
+    bool isLoading = false;
+
+    await showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('เปลี่ยนรหัสผ่าน'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-             TextField(
-              controller: oldPassController,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: 'รหัสผ่านเดิม'),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          return Container(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom,
             ),
-             TextField(
-              controller: newPassController,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: 'รหัสผ่านใหม่'),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
             ),
-             TextField(
-              controller: confirmPassController,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: 'ยืนยันรหัสผ่านใหม่'),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Drag handle
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // Header
+                  const Row(
+                    children: [
+                      Icon(Icons.lock_reset, color: Color(0xFFFF6B35), size: 28),
+                      SizedBox(width: 12),
+                      Text(
+                        'เปลี่ยนรหัสผ่าน',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  // Old password
+                  TextField(
+                    controller: oldPassController,
+                    obscureText: !isOldVisible,
+                    enabled: !isLoading,
+                    decoration: InputDecoration(
+                      labelText: 'รหัสผ่านเดิม',
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        icon: Icon(isOldVisible ? Icons.visibility : Icons.visibility_off),
+                        onPressed: () => setModalState(() => isOldVisible = !isOldVisible),
+                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // New password
+                  TextField(
+                    controller: newPassController,
+                    obscureText: !isNewVisible,
+                    enabled: !isLoading,
+                    decoration: InputDecoration(
+                      labelText: 'รหัสผ่านใหม่',
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        icon: Icon(isNewVisible ? Icons.visibility : Icons.visibility_off),
+                        onPressed: () => setModalState(() => isNewVisible = !isNewVisible),
+                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Confirm password
+                  TextField(
+                    controller: confirmPassController,
+                    obscureText: !isConfirmVisible,
+                    enabled: !isLoading,
+                    decoration: InputDecoration(
+                      labelText: 'ยืนยันรหัสผ่านใหม่',
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        icon: Icon(isConfirmVisible ? Icons.visibility : Icons.visibility_off),
+                        onPressed: () => setModalState(() => isConfirmVisible = !isConfirmVisible),
+                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Submit button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: isLoading
+                          ? null
+                          : () {
+                              if (newPassController.text != confirmPassController.text) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: const Row(
+                                      children: [
+                                        Icon(Icons.error_outline, color: Colors.white),
+                                        SizedBox(width: 12),
+                                        Text('รหัสผ่านใหม่ไม่ตรงกัน'),
+                                      ],
+                                    ),
+                                    backgroundColor: Colors.red,
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                );
+                                return;
+                              }
+                              if (oldPassController.text.isEmpty ||
+                                  newPassController.text.isEmpty ||
+                                  confirmPassController.text.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: const Row(
+                                      children: [
+                                        Icon(Icons.error_outline, color: Colors.white),
+                                        SizedBox(width: 12),
+                                        Text('กรุณากรอกข้อมูลให้ครบ'),
+                                      ],
+                                    ),
+                                    backgroundColor: Colors.red,
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                );
+                                return;
+                              }
+                              Navigator.pop(ctx);
+                              context.read<AuthCubit>().changePassword(
+                                    oldPassController.text,
+                                    newPassController.text,
+                                    confirmPassController.text,
+                                  );
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF6B35),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: isLoading
+                          ? const SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text('เปลี่ยนรหัสผ่าน', style: TextStyle(fontSize: 16)),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('ยกเลิก'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              if (newPassController.text != confirmPassController.text) {
-                 ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('รหัสผ่านใหม่ไม่ตรงกัน')),
-                 );
-                 return;
-              }
-              context.read<AuthCubit>().changePassword(
-                oldPassController.text, 
-                newPassController.text, 
-                confirmPassController.text
-              );
-            },
-            child: const Text('บันทึก'),
-          ),
-        ],
+          );
+        },
       ),
     );
   }

@@ -215,14 +215,15 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                             ),
                           ),
                           const SizedBox(height: 8),
-                          Row(
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 8,
                             children: [
                               _buildInfoChip(
                                 Icons.access_time,
                                 '${displayRecipe.prepTime} นาที',
                                 AppTheme.primaryOrange,
                               ),
-                              const SizedBox(width: 12),
                               _buildInfoChip(
                                 Icons.restaurant,
                                 'สูตรอาหาร',
@@ -273,49 +274,40 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                       : (displayRecipe.ingredients != null && displayRecipe.ingredients!.isNotEmpty)
                         ? Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: displayRecipe.ingredients!.map((ing) {
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 6),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 8,
-                                      height: 8,
-                                      decoration: const BoxDecoration(
-                                        color: Colors.teal,
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        ing.ingredientName,
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          color: Colors.grey[800],
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: Colors.teal.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        '${ing.quantity.toStringAsFixed(ing.quantity.truncateToDouble() == ing.quantity ? 0 : 1)} ${ing.unitName}',
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.teal,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                            children: [
+                              // Main Ingredients Section
+                              if (displayRecipe.ingredients!.any((ing) => ing.isMainIngredient)) ...[
+                                const Text(
+                                  'วัตถุดิบหลัก',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.primaryOrange,
+                                  ),
                                 ),
-                              );
-                            }).toList(),
+                                const SizedBox(height: 8),
+                                ...displayRecipe.ingredients!
+                                    .where((ing) => ing.isMainIngredient)
+                                    .map((ing) => _buildIngredientRow(ing)),
+                                const SizedBox(height: 16),
+                              ],
+                              
+                              // Sub Ingredients Section
+                              if (displayRecipe.ingredients!.any((ing) => !ing.isMainIngredient)) ...[
+                                Text(
+                                  'วัตถุดิบย่อย / เครื่องปรุง',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.teal[700],
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                ...displayRecipe.ingredients!
+                                    .where((ing) => !ing.isMainIngredient)
+                                    .map((ing) => _buildIngredientRow(ing)),
+                              ],
+                            ],
                           )
                         : Text(
                             'ไม่มีข้อมูลวัตถุดิบ',
@@ -777,7 +769,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
     try {
       final success = await ShoppingService().createNewShoppingList(
         shoppingType: 'recipe',
-        listName: 'วัตถุดิบ: ${widget.recipe.title}',
+        listName: widget.recipe.title,
         items: itemsPayload,
       );
 
@@ -816,6 +808,50 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
         _showError('เกิดข้อผิดพลาด: $e');
       }
     }
+  }
+
+  Widget _buildIngredientRow(RecipeIngredientItem ing) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: ing.isMainIngredient ? AppTheme.primaryOrange : Colors.teal,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              ing.ingredientName,
+              style: TextStyle(
+                fontSize: 16,
+                color: ing.isMainIngredient ? Colors.black : Colors.grey[800],
+                fontWeight: ing.isMainIngredient ? FontWeight.bold : FontWeight.w500,
+              ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.teal.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '${ing.quantity.toStringAsFixed(ing.quantity.truncateToDouble() == ing.quantity ? 0 : 1)} ${ing.unitName}',
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.teal,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showError(String message) {

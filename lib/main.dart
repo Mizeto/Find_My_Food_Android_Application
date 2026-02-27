@@ -42,12 +42,6 @@ class MyApp extends StatelessWidget {
         // Repository Provider
         RepositoryProvider(create: (context) => RecipeRepository()),
 
-        // Home BLoC
-        BlocProvider(
-          create: (context) =>
-              HomeBloc(repository: context.read<RecipeRepository>())
-                ..add(LoadHomeRecipes()),
-        ),
       ],
       child: BlocBuilder<ThemeCubit, bool>(
         builder: (context, isDarkMode) {
@@ -79,7 +73,12 @@ class AuthWrapper extends StatelessWidget {
         }
 
         if (state is AuthAuthenticated) {
-          return const MainNavigationScreen();
+          return BlocProvider(
+            create: (context) => HomeBloc(
+              repository: context.read<RecipeRepository>(),
+            )..add(LoadHomeRecipes()),
+            child: const MainNavigationScreen(),
+          );
         }
 
         if (state is AuthGoogleRegistrationRequired) {

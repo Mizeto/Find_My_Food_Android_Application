@@ -4,6 +4,7 @@ import 'package:equatable/equatable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
+import 'package:uuid/uuid.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../../profile/services/user_service.dart'; // Import UserService
@@ -57,6 +58,7 @@ class AuthCubit extends Cubit<AuthState> {
   final AuthService _authService;
   final UserService _userService; // Add UserService
   static const String _userKey = 'cached_user';
+  static const String _guestUuidKey = 'guest_uuid';
   
   // Define GoogleSignIn instance once
   final GoogleSignIn _googleSignIn = GoogleSignIn(
@@ -81,8 +83,24 @@ class AuthCubit extends Cubit<AuthState> {
       if (userJson != null) {
         try {
           final user = UserModel.fromJson(json.decode(userJson));
-          emit(AuthAuthenticated(user));
-          return;
+          
+          // Guest user: restore without auth token
+          if (user.isGuest && user.guestUuid != null) {
+            print('DEBUG: Restoring guest session with UUID: ${user.guestUuid}');
+            emit(AuthAuthenticated(user));
+            return;
+          }
+          
+          // Regular user: verify the auth token is also present
+          final token = await _authService.getToken();
+          if (token != null && token.isNotEmpty) {
+            emit(AuthAuthenticated(user));
+            return;
+          } else {
+            // Token missing — cache is stale, force re-login
+            print('DEBUG: Cached user found but auth token is missing — clearing cache');
+            await prefs.remove(_userKey);
+          }
         } catch (e) {
              // Json parse error, clear cache
              await prefs.remove(_userKey);
@@ -381,7 +399,17 @@ class AuthCubit extends Cubit<AuthState> {
     emit(AuthLoading());
 
     try {
-      final user = UserModel.guest();
+      final prefs = await SharedPreferences.getInstance();
+      
+      // Check if there's an existing guest UUID, otherwise generate new one
+      String? existingUuid = prefs.getString(_guestUuidKey);
+      final guestUuid = existingUuid ?? const Uuid().v4();
+      
+      // Save guest UUID
+      await prefs.setString(_guestUuidKey, guestUuid);
+      print('DEBUG: Guest sign in with UUID: $guestUuid');
+      
+      final user = UserModel.guest(uuid: guestUuid);
       await _cacheUser(user);
       emit(AuthAuthenticated(user));
     } catch (e) {
@@ -399,9 +427,11 @@ class AuthCubit extends Cubit<AuthState> {
         await _googleSignIn.signOut();
       } catch (_) {}
 
-      // Clear cached user
+      // Clear cached user, auth token, AND guest UUID
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_userKey);
+      await prefs.remove(_guestUuidKey);
+      await _authService.clearToken();
 
       emit(AuthUnauthenticated());
     } catch (e) {
