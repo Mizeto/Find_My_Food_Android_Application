@@ -88,22 +88,40 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() {
+       _isLoading = true;
+       _aiGeneratedUrl = null; // Clear old state
+       _selectedImage = null;
+    });
     try {
-      final prompt = _nameController.text.trim();
-      final url = await _recipeService.generateRecipeImage(prompt);
+      final recipeName = _nameController.text.trim();
+      final ingredients = _ingredients
+          .where((i) => i['name'].toString().isNotEmpty)
+          .map((i) => i['name'].toString())
+          .toList();
+
+      final result = await _recipeService.generateRecipeImage(recipeName, ingredients);
       
-      if (url != null) {
+      if (result != null) {
         setState(() {
-          _aiGeneratedUrl = url;
-          _selectedImage = null; // Clear local file if AI generated
+          if (result.startsWith('http')) {
+            _aiGeneratedUrl = result;
+            _selectedImage = null;
+          } else {
+            // It's a local file path (decoded from base64)
+            _selectedImage = File(result);
+            _aiGeneratedUrl = null;
+          }
+          _isLoading = false;
         });
+        
         if (mounted) {
            ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('สร้างรูปภาพด้วย AI สำเร็จ!'), backgroundColor: AppTheme.primaryOrange),
           );
         }
       } else {
+        setState(() => _isLoading = false);
         _showErrorDialog('ขออภัยครับ ไม่สามารถสร้างรูปภาพได้ในขณะนี้');
       }
     } catch (e) {
@@ -431,19 +449,46 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                 },
                 child: Container(
                   height: 200,
+                  width: double.infinity,
+                  clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
                     color: Colors.grey[200],
                     borderRadius: BorderRadius.circular(20),
-                    image: _selectedImage != null 
-                        ? DecorationImage(image: FileImage(_selectedImage!), fit: BoxFit.cover) 
-                        : (_aiGeneratedUrl != null 
-                            ? DecorationImage(image: NetworkImage(_aiGeneratedUrl!), fit: BoxFit.cover)
-                            : null),
                   ),
-                  child: (_selectedImage == null && _aiGeneratedUrl == null) ? const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [Icon(Icons.add_a_photo, size: 50, color: Colors.grey), SizedBox(height: 8), Text('เพิ่มรูปอาหาร')],
-                  ) : (_isLoading ? const Center(child: CircularProgressIndicator()) : null),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      if (_selectedImage != null)
+                        Image.file(
+                          _selectedImage!,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          height: double.infinity,
+                          errorBuilder: (ctx, err, stack) => const Icon(Icons.error, color: Colors.red),
+                        )
+                      else if (_aiGeneratedUrl != null)
+                        Image.network(
+                          _aiGeneratedUrl!,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          height: double.infinity,
+                          errorBuilder: (ctx, err, stack) => const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [Icon(Icons.broken_image, color: Colors.grey), Text('ไม่สามารถโหลดรูปภาพได้')],
+                          ),
+                        ),
+                      if (_selectedImage == null && _aiGeneratedUrl == null)
+                        const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [Icon(Icons.add_a_photo, size: 50, color: Colors.grey), SizedBox(height: 8), Text('เพิ่มรูปอาหาร')],
+                        ),
+                      if (_isLoading)
+                        Container(
+                          color: Colors.black26,
+                          child: const Center(child: CircularProgressIndicator(color: Colors.white)),
+                        ),
+                    ],
+                  ),
                 ),
               ),
               

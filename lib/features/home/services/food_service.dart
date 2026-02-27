@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import '../models/food_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -502,7 +504,7 @@ class RecipeService {
   }
 
   // POST /recipeAI/generateRecipeImage
-  Future<String?> generateRecipeImage(String prompt) async {
+  Future<String?> generateRecipeImage(String recipeName, List<String> ingredients) async {
     try {
       print('Generating recipe image with AI: $baseUrl/recipeAI/generateRecipeImage');
       final headers = await _getHeaders();
@@ -511,20 +513,73 @@ class RecipeService {
         Uri.parse('$baseUrl/recipeAI/generateRecipeImage'),
         headers: headers,
         body: jsonEncode({
-          'prompt': prompt,
+          'recipe_name': recipeName,
+          'ingredients': ingredients,
         }),
       ).timeout(const Duration(seconds: 90));
 
       if (response.statusCode == 200) {
-        final jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
+        final decodedBody = utf8.decode(response.bodyBytes);
+        print('Image Gen Response Body: $decodedBody');
+        final jsonResponse = jsonDecode(decodedBody);
+        
         if (jsonResponse['status'] == 'success') {
-          return jsonResponse['data']; // Returns the URL of the generated image
+          final data = jsonResponse['data'];
+          print('Extracted data field: $data (Type: ${data.runtimeType})');
+          
+          String? base64Data;
+          
+          if (data is String) {
+            if (data.startsWith('http')) {
+              print('Data is a URL: $data');
+              return data;
+            }
+            print('Data is a string, assuming base64');
+            base64Data = data;
+          } else if (data is Map) {
+            print('Data is a Map. Keys: ${data.keys}');
+            if (data.containsKey('image_base64')) {
+              base64Data = data['image_base64'];
+              print('Found image_base64 in Map');
+            } else if (data.containsKey('base64')) {
+              base64Data = data['base64'];
+              print('Found base64 in Map');
+            } else {
+              final url = data['image_url'] ?? data['url'] ?? data['data'];
+              if (url != null) {
+                print('Found URL in Map: $url');
+                return url.toString();
+              }
+            }
+          }
+
+          if (base64Data != null && base64Data is String) {
+            try {
+              print('Attempting to decode base64 data (length: ${base64Data.length})');
+              // Remove data URI prefix if present
+              if (base64Data.contains(',')) {
+                base64Data = base64Data.split(',').last;
+              }
+              
+              final bytes = base64Decode(base64Data.trim());
+              final tempDir = await getTemporaryDirectory();
+              final fileName = 'ai_gen_${DateTime.now().millisecondsSinceEpoch}.jpg';
+              final file = File('${tempDir.path}/$fileName');
+              await file.writeAsBytes(bytes);
+              print('SUCCESS: Saved AI image to temp file: ${file.path}');
+              return file.path;
+            } catch (e) {
+              print('ERROR decoding/saving base64: $e');
+            }
+          } else {
+            print('No base64 data or URL found in response data');
+          }
         }
       }
       print('Image Gen Error: ${response.statusCode} - ${response.body}');
       return null;
     } catch (e) {
-      print('Error generating image: $e');
+      print('Error generating image (Exception): $e');
       return null;
     }
   }
