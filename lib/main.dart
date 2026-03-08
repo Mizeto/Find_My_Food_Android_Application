@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 // Import theme
 import 'core/theme/app_theme.dart';
@@ -22,6 +24,7 @@ import 'features/scan_food/screens/scan_food_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('th', null);
 
   runApp(const MyApp());
 }
@@ -51,6 +54,16 @@ class MyApp extends StatelessWidget {
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
             themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [
+              Locale('th', 'TH'),
+              Locale('en', 'US'),
+            ],
+            locale: const Locale('th', 'TH'),
             home: const AuthWrapper(),
             // home: const MainNavigationScreen(), // Bypassed Login
           );
@@ -73,10 +86,11 @@ class AuthWrapper extends StatelessWidget {
         }
 
         if (state is AuthAuthenticated) {
+          final isGuest = state.user.isGuest;
           return BlocProvider(
             create: (context) => HomeBloc(
               repository: context.read<RecipeRepository>(),
-            )..add(LoadHomeRecipes()),
+            )..add(LoadHomeRecipes(isGuest: isGuest)),
             child: const MainNavigationScreen(),
           );
         }
@@ -163,6 +177,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     final isDarkMode = context.watch<ThemeCubit>().isDarkMode;
     final authState = context.watch<AuthCubit>().state;
     final isAuthenticated = authState is AuthAuthenticated;
+    final isGuest = context.watch<AuthCubit>().isGuest;
 
     // Filter screens and destinations based on authentication
     List<Widget> currentScreens = [const HomeScreen()];

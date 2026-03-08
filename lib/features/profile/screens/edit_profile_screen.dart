@@ -313,7 +313,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('แก้ไขโปรไฟล์'),
+        title: const Text('แก้ไขข้อมูลส่วนตัว'),
         centerTitle: true,
         backgroundColor: AppTheme.primaryOrange,
         foregroundColor: Colors.white,
@@ -402,7 +402,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 const SizedBox(height: 16),
 
                 Text(
-                  'กดที่รูปเพื่อเปลี่ยนรูปโปรไฟล์',
+                  'กดที่รูปเพื่อเปลี่ยนรูปภาพของคุณ',
                   style: TextStyle(
                     color: Colors.grey[600],
                     fontSize: 14,

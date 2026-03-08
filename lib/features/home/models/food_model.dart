@@ -216,8 +216,9 @@ class DishPrediction {
 class DishAIResponse {
   final List<DishPrediction> top3;
   final List<Recipe>? recipes;
+  final List<String> ingredients;
 
-  DishAIResponse({required this.top3, this.recipes});
+  DishAIResponse({required this.top3, this.recipes, this.ingredients = const []});
 
   factory DishAIResponse.fromJson(dynamic json) {
     List<Recipe>? recipes;
@@ -225,42 +226,46 @@ class DishAIResponse {
 
     if (json is List) {
       recipes = json.map((e) => Recipe.fromJson(e as Map<String, dynamic>)).toList();
-      // For backward compatibility or if we want to also show the top info
       predictions = recipes.map((r) => DishPrediction(className: r.title, confidence: 1.0)).toList();
       
       return DishAIResponse(
         top3: predictions,
         recipes: recipes,
+        ingredients: const [],
       );
     }
     
     final list = (json['top_3'] ?? json['results'] ?? json['predictions']) as List?;
     predictions = list?.map((e) => DishPrediction.fromJson(e as Map<String, dynamic>)).toList() ?? [];
     
-    // Check if data itself has list of recipes (case where json is Map but data field is List)
-    // Actually our factory gets 'data' from the service usually.
+    final ingredientsList = (json['ingredients'] ?? json['items']) as List?;
+    final ingredients = ingredientsList?.map((e) => e.toString()).toList() ?? [];
     
+    final recipesList = (json['recipes'] ?? json['data']) as List?;
+    recipes = recipesList?.map((e) => Recipe.fromJson(e as Map<String, dynamic>)).toList();
+
     return DishAIResponse(
       top3: predictions,
-      recipes: null, // If it's the old format, recipes will be null
+      recipes: recipes,
+      ingredients: ingredients,
     );
   }
 }
 
 class UserStockRequest {
-  final int ingredientId;
+  final int? ingredientId;
   final String itemName;
   final double quantity;
   final int unitId;
-  final String expireDate;
+  final String? expireDate;
   final String storageLocation;
 
   UserStockRequest({
-    required this.ingredientId,
+    this.ingredientId,
     required this.itemName,
     required this.quantity,
     required this.unitId,
-    required this.expireDate,
+    this.expireDate,
     required this.storageLocation,
   });
 
@@ -278,35 +283,58 @@ class UserStockRequest {
 
 class UserStockModel {
   final int stockId;
-  final int ingredientId;
+  final int? ingredientId;
   final String itemName;
   final double quantity;
   final int unitId;
   final String unitName;
-  final String expireDate;
+  final String? expireDate;
   final String storageLocation;
 
   UserStockModel({
     required this.stockId,
-    required this.ingredientId,
+    this.ingredientId,
     required this.itemName,
     required this.quantity,
     required this.unitId,
     required this.unitName,
-    required this.expireDate,
+    this.expireDate,
     required this.storageLocation,
   });
 
   factory UserStockModel.fromJson(Map<String, dynamic> json) {
     return UserStockModel(
       stockId: json['stock_id'] ?? 0,
-      ingredientId: json['ingredient_id'] ?? 0,
+      ingredientId: json['ingredient_id'],
       itemName: json['item_name'] ?? '',
       quantity: (json['quantity'] as num?)?.toDouble() ?? 0.0,
       unitId: json['unit_id'] ?? 0,
       unitName: json['unit_name'] ?? '',
-      expireDate: json['expire_date'] ?? '',
+      expireDate: json['expire_date'] as String?,
       storageLocation: json['storage_location'] ?? '',
     );
+  }
+}
+
+class UserStockUpdateRequest {
+  final double quantity;
+  final int unitId;
+  final String? expireDate;
+  final String storageLocation;
+
+  UserStockUpdateRequest({
+    required this.quantity,
+    required this.unitId,
+    this.expireDate,
+    required this.storageLocation,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'quantity': quantity,
+      'unit_id': unitId,
+      'expire_date': expireDate,
+      'storage_location': storageLocation,
+    };
   }
 }

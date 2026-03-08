@@ -5,6 +5,8 @@ import '../../../core/theme/theme_cubit.dart';
 import '../../auth/cubit/auth_cubit.dart';
 import '../../auth/services/auth_service.dart';
 import 'edit_profile_screen.dart';
+import './user_stock_screen.dart';
+import './my_recipes_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -33,7 +35,10 @@ class ProfileScreen extends StatelessWidget {
               if (user.isGuest)
                 SliverToBoxAdapter(
                   child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
@@ -50,7 +55,11 @@ class ProfileScreen extends StatelessWidget {
                     ),
                     child: Column(
                       children: [
-                        const Icon(Icons.person_add, color: Colors.white, size: 40),
+                        const Icon(
+                          Icons.person_add,
+                          color: Colors.white,
+                          size: 40,
+                        ),
                         const SizedBox(height: 12),
                         const Text(
                           'คุณกำลังใช้งานแบบผู้เยี่ยมชม',
@@ -77,7 +86,10 @@ class ProfileScreen extends StatelessWidget {
                               context.read<AuthCubit>().signOut();
                             },
                             icon: const Icon(Icons.login),
-                            label: const Text('ผูกบัญชี / เข้าสู่ระบบ', style: TextStyle(fontSize: 16)),
+                            label: const Text(
+                              'ผูกบัญชี / เข้าสู่ระบบ',
+                              style: TextStyle(fontSize: 16),
+                            ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.white,
                               foregroundColor: const Color(0xFFFF6B35),
@@ -95,23 +107,15 @@ class ProfileScreen extends StatelessWidget {
 
               // Menu Items (hide for guests)
               if (!user.isGuest)
-                SliverToBoxAdapter(
-                  child: _ProfileMenu(isDarkMode: isDarkMode),
-                ),
+                SliverToBoxAdapter(child: _ProfileMenu(isDarkMode: isDarkMode)),
 
               // Theme Toggle
-              SliverToBoxAdapter(
-                child: _ThemeToggle(isDarkMode: isDarkMode),
-              ),
+              SliverToBoxAdapter(child: _ThemeToggle(isDarkMode: isDarkMode)),
 
               // Logout Button
-              SliverToBoxAdapter(
-                child: _LogoutButton(),
-              ),
+              SliverToBoxAdapter(child: _LogoutButton()),
 
-              const SliverToBoxAdapter(
-                child: SizedBox(height: 100),
-              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 40)),
             ],
           );
         },
@@ -130,7 +134,7 @@ class _ProfileHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 60, 20, 24),
+      padding: const EdgeInsets.fromLTRB(20, 60, 20, 12),
       child: Column(
         children: [
           // Avatar and Notification Row
@@ -152,7 +156,8 @@ class _ProfileHeader extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: user.profileImage != null && user.profileImage!.isNotEmpty
+                child:
+                    user.profileImage != null && user.profileImage!.isNotEmpty
                     ? ClipOval(
                         child: Image.network(
                           user.profileImage!,
@@ -182,7 +187,7 @@ class _ProfileHeader extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
           // User Info
           Align(
@@ -210,24 +215,6 @@ class _ProfileHeader extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 16),
-
-          // Stats Row
-          Row(
-            children: [
-              _StatItem(
-                count: '0',
-                label: 'ผู้ติดตาม',
-                isDarkMode: isDarkMode,
-              ),
-              const SizedBox(width: 24),
-              _StatItem(
-                count: '0',
-                label: 'กำลังติดตาม',
-                isDarkMode: isDarkMode,
-              ),
-            ],
-          ),
         ],
       ),
     );
@@ -249,42 +236,6 @@ class _ProfileHeader extends StatelessWidget {
   }
 }
 
-// Stat Item
-class _StatItem extends StatelessWidget {
-  final String count;
-  final String label;
-  final bool isDarkMode;
-
-  const _StatItem({
-    required this.count,
-    required this.label,
-    required this.isDarkMode,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Text(
-          count,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-            color: isDarkMode ? Colors.white : Colors.black87,
-          ),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 // Profile Menu
 class _ProfileMenu extends StatelessWidget {
@@ -296,44 +247,55 @@ class _ProfileMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     final menuItems = [
       _MenuItem(Icons.person_outline, 'โปรไฟล์'),
-      _MenuItem(Icons.notifications_outlined, 'เพื่อนของคุณ'),
-      _MenuItem(Icons.bar_chart, 'สถิติของสูตร'),
-      _MenuItem(Icons.access_time, 'สูตรอาหารที่เพิ่งดู'),
-      _MenuItem(Icons.workspace_premium_outlined, 'พรีเมียม'),
-      _MenuItem(Icons.emoji_events_outlined, 'กิจกรรม'),
-      _MenuItem(Icons.settings_outlined, 'การตั้งค่า'),
-      _MenuItem(Icons.help_outline, 'คำถามที่พบบ่อย'),
+      _MenuItem(Icons.kitchen_outlined, 'จัดการวัตถุดิบ (ตู้เย็น)'),
+      _MenuItem(Icons.restaurant_menu_outlined, 'สูตรอาหารของฉัน'),
       _MenuItem(Icons.send_outlined, 'ส่งข้อเสนอแนะ'),
     ];
 
     return Column(
       children: [
-        const Divider(height: 1),
-        ...menuItems.map((item) => _MenuItemTile(
-              icon: item.icon,
-              title: item.title,
-              isDarkMode: isDarkMode,
-              onTap: () {
-                if (item.title == 'โปรไฟล์') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const EditProfileScreen(),
-                    ),
-                  );
-                } else if (item.title == 'ส่งข้อเสนอแนะ') {
-                  _showFeedbackDialog(context);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('เปิด ${item.title}'),
-                      duration: const Duration(seconds: 1),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              },
-            )),
+        const Divider(height: 0.5),
+        ...menuItems.map(
+          (item) => _MenuItemTile(
+            icon: item.icon,
+            title: item.title,
+            isDarkMode: isDarkMode,
+            onTap: () {
+              if (item.title == 'โปรไฟล์') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const EditProfileScreen(),
+                  ),
+                );
+              } else if (item.title == 'จัดการวัตถุดิบ (ตู้เย็น)') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const UserStockScreen(),
+                  ),
+                );
+              } else if (item.title == 'สูตรอาหารของฉัน') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MyRecipesScreen(),
+                  ),
+                );
+              } else if (item.title == 'ส่งข้อเสนอแนะ') {
+                _showFeedbackDialog(context);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('เปิด ${item.title}'),
+                    duration: const Duration(seconds: 1),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+          ),
+        ),
       ],
     );
   }
@@ -376,11 +338,18 @@ class _ProfileMenu extends StatelessWidget {
                   const SizedBox(height: 20),
                   const Row(
                     children: [
-                      Icon(Icons.feedback_outlined, color: Color(0xFFFF6B35), size: 28),
+                      Icon(
+                        Icons.feedback_outlined,
+                        color: Color(0xFFFF6B35),
+                        size: 28,
+                      ),
                       SizedBox(width: 12),
                       Text(
                         'ส่งข้อเสนอแนะ',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -391,7 +360,9 @@ class _ProfileMenu extends StatelessWidget {
                     decoration: InputDecoration(
                       labelText: 'หัวข้อ',
                       prefixIcon: const Icon(Icons.title),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -406,7 +377,9 @@ class _ProfileMenu extends StatelessWidget {
                         padding: EdgeInsets.only(bottom: 52),
                         child: Icon(Icons.description_outlined),
                       ),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -422,7 +395,9 @@ class _ProfileMenu extends StatelessWidget {
                               if (title.isEmpty || detail.isEmpty) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('กรุณากรอกหัวข้อและรายละเอียด'),
+                                    content: Text(
+                                      'กรุณากรอกหัวข้อและรายละเอียด',
+                                    ),
                                     backgroundColor: Colors.red,
                                   ),
                                 );
@@ -441,16 +416,22 @@ class _ProfileMenu extends StatelessWidget {
                                       content: Row(
                                         children: [
                                           Icon(
-                                            ok ? Icons.check_circle : Icons.error_outline,
+                                            ok
+                                                ? Icons.check_circle
+                                                : Icons.error_outline,
                                             color: Colors.white,
                                           ),
                                           const SizedBox(width: 12),
-                                          Text(ok
-                                              ? 'ส่งข้อเสนอแนะเรียบร้อยแล้ว ขอบคุณ!'
-                                              : 'ส่งข้อเสนอแนะไม่สำเร็จ'),
+                                          Text(
+                                            ok
+                                                ? 'ส่งข้อเสนอแนะเรียบร้อยแล้ว ขอบคุณ!'
+                                                : 'ส่งข้อเสนอแนะไม่สำเร็จ',
+                                          ),
                                         ],
                                       ),
-                                      backgroundColor: ok ? Colors.green : Colors.red,
+                                      backgroundColor: ok
+                                          ? Colors.green
+                                          : Colors.red,
                                     ),
                                   );
                                 }
@@ -482,7 +463,10 @@ class _ProfileMenu extends StatelessWidget {
                                 strokeWidth: 2,
                               ),
                             )
-                          : const Text('ส่งข้อเสนอแนะ', style: TextStyle(fontSize: 16)),
+                          : const Text(
+                              'ส่งข้อเสนอแนะ',
+                              style: TextStyle(fontSize: 16),
+                            ),
                     ),
                   ),
                 ],
@@ -557,7 +541,7 @@ class _ThemeToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isDarkMode
@@ -600,12 +584,12 @@ class _LogoutButton extends StatelessWidget {
     final isGuest = context.watch<AuthCubit>().isGuest;
     final labelText = isGuest ? 'เข้าสู่ระบบ' : 'ออกจากระบบ';
     final dialogTitle = isGuest ? 'เข้าสู่ระบบ' : 'ออกจากระบบ';
-    final dialogContent = isGuest 
-        ? 'คุณต้องการไปที่หน้าเข้าสู่ระบบเพื่อผูกบัญชีหรือไม่?' 
+    final dialogContent = isGuest
+        ? 'คุณต้องการไปที่หน้าเข้าสู่ระบบเพื่อผูกบัญชีหรือไม่?'
         : 'คุณต้องการออกจากระบบหรือไม่?';
 
     return Container(
-      margin: const EdgeInsets.all(16),
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 16),
       child: OutlinedButton.icon(
         onPressed: () {
           showDialog(
@@ -633,7 +617,7 @@ class _LogoutButton extends StatelessWidget {
           );
         },
         icon: Icon(
-          isGuest ? Icons.login : Icons.logout, 
+          isGuest ? Icons.login : Icons.logout,
           color: isGuest ? Colors.blue : Colors.red,
         ),
         label: Text(

@@ -140,11 +140,12 @@ class HomeScreen extends StatelessWidget {
                 }
 
                 if (state is HomeLoaded) {
+                  final isGuest = context.watch<AuthCubit>().isGuest;
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 1. Recommended for You (Horizontal)
-                      if (state.recommendedForYou.isNotEmpty)
+                      // 1. Recommended for You (Horizontal) - Hide for guests
+                      if (!isGuest && state.recommendedForYou.isNotEmpty)
                         _buildHorizontalSection(
                           context: context,
                           title: 'แนะนำสำหรับคุณ ✨',
@@ -152,8 +153,8 @@ class HomeScreen extends StatelessWidget {
                           isDarkMode: isDarkMode,
                         ),
 
-                      // 2. Based on Stock (Horizontal)
-                      if (state.recommendedFromStock.isNotEmpty)
+                      // 2. Based on Stock (Horizontal) - Hide for guests
+                      if (!isGuest && state.recommendedFromStock.isNotEmpty)
                         _buildHorizontalSection(
                           context: context,
                           title: 'เมนูจากของที่มี 🥦',
@@ -208,7 +209,9 @@ class HomeScreen extends StatelessWidget {
       floatingActionButton: Builder(
         builder: (context) {
           final authState = context.watch<AuthCubit>().state;
-          if (authState is! AuthAuthenticated) return const SizedBox.shrink();
+          final isGuest = context.watch<AuthCubit>().isGuest;
+          
+          if (authState is! AuthAuthenticated || isGuest) return const SizedBox.shrink();
 
           return FloatingActionButton(
             onPressed: () async {

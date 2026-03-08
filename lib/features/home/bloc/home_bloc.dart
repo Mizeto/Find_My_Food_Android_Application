@@ -14,17 +14,23 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<LoadHomeRecipes>((event, emit) async {
       emit(HomeLoading());
       try {
-        final results = await Future.wait([
-          repository.getRecipes(),
-          repository.getRecommendForYou(),
-          repository.getRecommendFromStock(),
-        ]);
+        if (event.isGuest) {
+          // Guest: only load main recipes, skip recommendations
+          final recipes = await repository.getRecipes();
+          emit(HomeLoaded(recipes: recipes));
+        } else {
+          final results = await Future.wait([
+            repository.getRecipes(),
+            repository.getRecommendForYou(),
+            repository.getRecommendFromStock(),
+          ]);
 
-        emit(HomeLoaded(
-          recipes: results[0] as List<Recipe>,
-          recommendedForYou: results[1] as List<Recipe>,
-          recommendedFromStock: results[2] as List<Recipe>,
-        ));
+          emit(HomeLoaded(
+            recipes: results[0] as List<Recipe>,
+            recommendedForYou: results[1] as List<Recipe>,
+            recommendedFromStock: results[2] as List<Recipe>,
+          ));
+        }
       } catch (e) {
         emit(HomeError(e.toString()));
       }

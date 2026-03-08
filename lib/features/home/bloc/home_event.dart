@@ -6,7 +6,13 @@ abstract class HomeEvent extends Equatable {
 }
 
 // คำสั่ง: "ช่วยไปโหลดเมนูอาหารมาให้หน่อย"
-class LoadHomeRecipes extends HomeEvent {}
+class LoadHomeRecipes extends HomeEvent {
+  final bool isGuest;
+  LoadHomeRecipes({this.isGuest = false});
+
+  @override
+  List<Object> get props => [isGuest];
+}
 
 // คำสั่ง: "ช่วยค้นหาตามคำนี้ให้หน่อย"
 class SearchRecipes extends HomeEvent {

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../auth/cubit/auth_cubit.dart';
 import '../bloc/scan_food_cubit.dart';
 import 'scan_result_screen.dart';
 
@@ -31,6 +32,12 @@ class _ScanFoodViewState extends State<_ScanFoodView> {
   bool _isDishMode = true; // Default to Dish Prediction
 
   Future<void> _pickImage(BuildContext context, ImageSource source) async {
+    final isGuest = context.read<AuthCubit>().isGuest;
+    if (isGuest) {
+      _showLoginPrompt(context);
+      return;
+    }
+
     try {
       final XFile? pickedFile = await _picker.pickImage(
         source: source,
@@ -50,6 +57,40 @@ class _ScanFoodViewState extends State<_ScanFoodView> {
         SnackBar(content: Text('Error: ${e.toString()}')),
       );
     }
+  }
+
+  void _showLoginPrompt(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.lock_outline, color: AppTheme.primaryOrange),
+            SizedBox(width: 10),
+            Text('เข้าสู่ระบบก่อนใช้งาน'),
+          ],
+        ),
+        content: const Text('ฟังก์ชันสแกนอาหารและวัตถุดิบ\nจำเป็นต้องเข้าสู่ระบบก่อนเพื่อจัดเก็บข้อมูลและประมวลผลครับ 🍳'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ไว้ทีหลัง', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.read<AuthCubit>().signOut(); // Clear guest session and go to login
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryOrange,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('เข้าสู่ระบบ', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -74,6 +115,7 @@ class _ScanFoodViewState extends State<_ScanFoodView> {
                   image: _image!,
                   ingredients: state.ingredients,
                   dishResult: state.dishResponse,
+                  isRecommendation: !_isDishMode,
                 ),
               ),
             );
@@ -118,7 +160,7 @@ class _ScanFoodViewState extends State<_ScanFoodView> {
                         children: [
                           Expanded(
                             child: _buildModeToggle(
-                              label: 'ทายเมนูอาหาร',
+                              label: 'ทายจากรูปอาหาร',
                               icon: Icons.restaurant,
                               isSelected: _isDishMode,
                               onTap: () => setState(() => _isDishMode = true),
@@ -126,7 +168,7 @@ class _ScanFoodViewState extends State<_ScanFoodView> {
                           ),
                           Expanded(
                             child: _buildModeToggle(
-                              label: 'สแกนวัตถุดิบ',
+                              label: 'แนะนำสูตรอาหาร',
                               icon: Icons.shopping_basket,
                               isSelected: !_isDishMode,
                               onTap: () => setState(() => _isDishMode = false),
@@ -182,8 +224,8 @@ class _ScanFoodViewState extends State<_ScanFoodView> {
                     const SizedBox(height: 12),
                     Text(
                       _isDishMode 
-                        ? 'ให้ AI ช่วยทายว่าจานนี้คือเมนูอะไร\nคัดเลือกมาให้ 3 อันดับที่แม่นยำที่สุด!'
-                        : 'ถ่ายรูปวัตถุดิบในตู้เย็น\nให้เราช่วยหาเมนูที่ทำได้จริง!',
+                        ? 'ให้ AI ช่วยทายว่าจานนี้คือเมนูอะไร\nคัดเลือกมาให้เพื่อให้คุณรู้ข้อมูล!'
+                        : 'ถ่ายรูปวัตถุดิบในตู้เย็นหรือหน้าร้าน\nให้เราช่วยแนะนำเมนูที่น่าจะทำได้!',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 15, color: Colors.grey[600], height: 1.5),
                     ),

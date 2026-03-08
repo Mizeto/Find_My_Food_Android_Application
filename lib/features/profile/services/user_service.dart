@@ -14,6 +14,7 @@ class UserService {
 
   Future<Map<String, String>> _getHeaders({bool isMultipart = false}) async {
     final token = await _getToken();
+    print('DEBUG: UserService retrieved token: ${token != null ? "${token.substring(0, 10)}..." : "NULL"}');
     final headers = {
       'accept': 'application/json',
     };

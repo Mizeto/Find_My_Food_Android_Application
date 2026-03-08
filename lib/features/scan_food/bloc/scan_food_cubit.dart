@@ -3,18 +3,14 @@ import 'package:equatable/equatable.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../home/services/food_service.dart';
 import '../../home/models/food_model.dart';
-import '../services/ai_service.dart';
-import 'dart:convert';
 
 part 'scan_food_state.dart';
 
 class ScanFoodCubit extends Cubit<ScanFoodState> {
   final RecipeService _recipeService;
-  final AiService _aiService;
 
-  ScanFoodCubit({RecipeService? recipeService, AiService? aiService}) 
+  ScanFoodCubit({RecipeService? recipeService}) 
       : _recipeService = recipeService ?? RecipeService(),
-        _aiService = aiService ?? AiService(),
         super(ScanFoodInitial());
 
   Future<void> analyzeImage(XFile image, {required bool isDishPrediction}) async {
@@ -30,30 +26,28 @@ class ScanFoodCubit extends Cubit<ScanFoodState> {
           return;
         }
         
-        emit(ScanFoodSuccess(dishResponse: dishResult));
+        emit(ScanFoodSuccess(
+          ingredients: dishResult.ingredients,
+          dishResponse: dishResult,
+        ));
       } else {
-        // 2. Identify Ingredients (via Local Gemini)
-        final bytes = await image.readAsBytes();
-        final jsonString = await _aiService.identifyIngredients(bytes);
-        final cleanJson = jsonString.replaceAll('```json', '').replaceAll('```', '').trim();
-        
-        List<String> ingredients = [];
-        try {
-          ingredients = List<String>.from(jsonDecode(cleanJson));
-        } catch (e) {
-          ingredients = cleanJson.replaceAll('[', '').replaceAll(']', '').replaceAll('"', '').split(',');
-        }
+        // 2. Identify Ingredients/Recommend Recipes (via Backend API)
+        final result = await _recipeService.analyzeIngredientImage(image.path);
 
-        if (ingredients.isEmpty) {
-          emit(const ScanFoodError('ไม่พบวัตถุดิบในภาพ'));
+        if (result == null || (result.top3.isEmpty && (result.recipes == null || result.recipes!.isEmpty))) {
+          emit(const ScanFoodError('ไม่พบข้อมูลจากการวิเคราะห์'));
           return;
         }
         
-        emit(ScanFoodSuccess(ingredients: ingredients));
+        emit(ScanFoodSuccess(
+          ingredients: result.ingredients,
+          dishResponse: result,
+        ));
       }
 
     } catch (e) {
-      emit(ScanFoodError('ผิดพลาด: ${e.toString()}'));
+      final errorMsg = e.toString().replaceFirst('Exception: ', '');
+      emit(ScanFoodError(errorMsg));
     }
   }
 }

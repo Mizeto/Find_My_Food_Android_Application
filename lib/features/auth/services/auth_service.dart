@@ -10,6 +10,7 @@ class AuthService {
   // Save token to SharedPreferences
   Future<void> _saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
+    print('DEBUG: Saving token to SharedPreferences with key: $_tokenKey (Token: ${token.substring(0, 10)}...)');
     await prefs.setString(_tokenKey, token);
   }
 
@@ -45,7 +46,9 @@ class AuthService {
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final responseBody = response.body;
+        print('DEBUG: Login raw response: $responseBody');
+        final data = jsonDecode(responseBody);
         print('Login Response: $data');
         
         // Check the body-level status (server returns 200 even on failure)

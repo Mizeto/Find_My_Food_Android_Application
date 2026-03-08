@@ -99,8 +99,28 @@ class RecipeRepository {
     return _recipeService.getAllUnits();
   }
 
+  Future<List<IngredientModel>> getIngredientByName(String name) async {
+    return _recipeService.getIngredientByNameSearch(name);
+  }
+
   Future<bool> addUserStock(UserStockRequest request) async {
     return _recipeService.addUserStock(request);
+  }
+
+  Future<bool> updateUserStock(int stockId, UserStockUpdateRequest request) async {
+    return _recipeService.updateUserStockItem(stockId, request);
+  }
+
+  Future<bool> deleteUserStock(int stockId) async {
+    return _recipeService.deleteUserStockItem(stockId);
+  }
+
+  Future<List<UserStockModel>> getUserStockByStorage(String storageLocation) async {
+    return _recipeService.getUserStockFromStorage(storageLocation);
+  }
+
+  Future<String?> getItemExpireDate(String storageLocation, int itemId) async {
+    return _recipeService.getItemExpireDate(storageLocation, itemId);
   }
 
   Future<List<Recipe>> getRecommendFromStock() async {
@@ -118,6 +138,15 @@ class RecipeRepository {
       return _mapRecipes(apiRecipes);
     } catch (e) {
       throw Exception('Error loading recommendations for you: $e');
+    }
+  }
+
+  Future<List<Recipe>> getMyRecipes() async {
+    try {
+      final apiRecipes = await _recipeService.getMyCreateRecipes();
+      return _mapRecipes(apiRecipes);
+    } catch (e) {
+      throw Exception('Error loading my recipes: $e');
     }
   }
 

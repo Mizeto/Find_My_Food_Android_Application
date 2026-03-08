@@ -106,6 +106,7 @@ class RecipeService {
 
   Future<Map<String, String>> _getHeaders({bool isMultipart = false}) async {
     final token = await _getToken();
+    print('DEBUG: RecipeService retrieved token: ${token != null ? "${token.substring(0, 10)}..." : "NULL"}');
     final headers = {
       'accept': 'application/json',
     };
@@ -287,15 +288,15 @@ class RecipeService {
     }
   }
 
-  // POST /recipeAI/ - Predict Dish Name
+  // POST /recipeAI/analyzeFoodImage - Predict Dish Name
   Future<DishAIResponse?> predictDishAI(String filePath) async {
     try {
-      print('Predicting dish with AI: $baseUrl/recipeAI/');
+      print('Predicting dish with AI: $baseUrl/recipeAI/analyzeFoodImage');
       final token = await _getToken();
       
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('$baseUrl/recipeAI/'),
+        Uri.parse('$baseUrl/recipeAI/analyzeFoodImage'),
       );
       
       request.headers['accept'] = 'application/json';
@@ -336,6 +337,57 @@ class RecipeService {
       }
     } catch (e) {
       print('Error during Dish AI: $e');
+      return null;
+    }
+  }
+
+  // POST /recipeAI/analyzeIngredientImage - Identify Ingredients/Recommend Recipes from Image
+  Future<DishAIResponse?> analyzeIngredientImage(String filePath) async {
+    try {
+      print('Analyzing ingredients with AI: $baseUrl/recipeAI/analyzeIngredientImage');
+      final token = await _getToken();
+      
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/recipeAI/analyzeIngredientImage'),
+      );
+      
+      request.headers['accept'] = 'application/json';
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+      
+      request.files.add(await http.MultipartFile.fromPath(
+        'file', 
+        filePath,
+      ));
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final decodedBody = utf8.decode(response.bodyBytes);
+        print('Ingredient AI Raw Response: $decodedBody');
+        
+        final dynamic jsonResponse = jsonDecode(decodedBody);
+        
+        if (jsonResponse is Map<String, dynamic> && jsonResponse.containsKey('status')) {
+          if (jsonResponse['status'] == 'success') {
+            final data = jsonResponse['data'];
+            // Since backend is returning recipes, we parse it as DishAIResponse
+            return DishAIResponse.fromJson(data);
+          } else {
+            throw Exception(jsonResponse['message'] ?? 'Ingredient analysis failed');
+          }
+        }
+      } else {
+        final errorBody = utf8.decode(response.bodyBytes);
+        print('Ingredient AI Failed Response: $errorBody');
+        throw Exception('Failed to analyze: ${response.statusCode} - $errorBody');
+      }
+      return null;
+    } catch (e) {
+      print('Error during Ingredient AI: $e');
       return null;
     }
   }
@@ -426,7 +478,6 @@ class RecipeService {
     }
   }
 
-  // POST /userStock/addUserStock
   Future<bool> addUserStock(UserStockRequest request) async {
     try {
       final headers = await _getHeaders();
@@ -446,6 +497,104 @@ class RecipeService {
     } catch (e) {
       print('Error adding user stock: $e');
       throw Exception('Connection error: $e');
+    }
+  }
+
+  // PATCH /userStock/updateItemInUserStock/{stock_id}
+  Future<bool> updateUserStockItem(int stockId, UserStockUpdateRequest request) async {
+    try {
+      final headers = await _getHeaders();
+      print('Updating user stock: $baseUrl/userStock/updateItemInUserStock/$stockId');
+      final response = await http.patch(
+        Uri.parse('$baseUrl/userStock/updateItemInUserStock/$stockId'),
+        headers: headers,
+        body: jsonEncode(request.toJson()),
+      );
+
+      print('Update User Stock Response: ${response.statusCode} ${response.body}');
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(response.body);
+        return jsonResponse['status'] == 'success';
+      }
+      return false;
+    } catch (e) {
+      print('Error updating user stock: $e');
+      throw Exception('Connection error: $e');
+    }
+  }
+
+  // GET /userStock/getItemExpireDate/{storage_location}/{item_id}
+  Future<String?> getItemExpireDate(String storageLocation, int itemId) async {
+    try {
+      final headers = await _getHeaders();
+      print('Fetching item expire date: $baseUrl/userStock/getItemExpireDate/$storageLocation/$itemId');
+      final response = await http.get(
+        Uri.parse('$baseUrl/userStock/getItemExpireDate/$storageLocation/$itemId'),
+        headers: headers,
+      );
+
+      print('Get Item Expire Date Response: ${response.statusCode} ${response.body}');
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+        if (jsonResponse['status'] == 'success') {
+          final data = jsonResponse['data'];
+          if (data is Map && data.containsKey('expire_date')) {
+            return data['expire_date']?.toString();
+          }
+          return data?.toString();
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching item expire date: $e');
+      return null;
+    }
+  }
+
+  // DELETE /userStock/deleteItemInUserStock/{stock_id}
+  Future<bool> deleteUserStockItem(int stockId) async {
+    try {
+      final headers = await _getHeaders();
+      print('Deleting user stock: $baseUrl/userStock/deleteItemInUserStock/$stockId');
+      final response = await http.delete(
+        Uri.parse('$baseUrl/userStock/deleteItemInUserStock/$stockId'),
+        headers: headers,
+      );
+
+      print('Delete User Stock Response: ${response.statusCode} ${response.body}');
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(response.body);
+        return jsonResponse['status'] == 'success';
+      }
+      return false;
+    } catch (e) {
+      print('Error deleting user stock: $e');
+      throw Exception('Connection error: $e');
+    }
+  }
+
+  // GET /userStock/getUserStockFromStorage/{storage_location}
+  Future<List<UserStockModel>> getUserStockFromStorage(String storageLocation) async {
+    try {
+      final headers = await _getHeaders();
+      print('Fetching user stock from $storageLocation: $baseUrl/userStock/getUserStockFromStorage/$storageLocation');
+      final response = await http.get(
+        Uri.parse('$baseUrl/userStock/getUserStockFromStorage/$storageLocation'),
+        headers: headers,
+      );
+
+      print('Get User Stock Response Status: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
+        if (jsonResponse['status'] == 'success') {
+          final List<dynamic> data = jsonResponse['data'] ?? [];
+          return data.map((json) => UserStockModel.fromJson(json)).toList();
+        }
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching user stock from storage: $e');
+      return [];
     }
   }
 
@@ -499,6 +648,33 @@ class RecipeService {
       }
     } catch (e) {
       print('Error fetching recommend recipes for you: $e');
+      throw Exception('Connection error: $e');
+    }
+  }
+
+  // GET /recipe/getMyCreateRecipe
+  Future<List<RecipeModel>> getMyCreateRecipes() async {
+    try {
+      final headers = await _getHeaders();
+      print('Fetching my create recipes: $baseUrl/recipe/getMyCreateRecipe');
+      final response = await http.get(
+        Uri.parse('$baseUrl/recipe/getMyCreateRecipe'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
+        if (jsonResponse['status'] == 'success') {
+          final List<dynamic> data = jsonResponse['data'] ?? [];
+          return data.map((json) => RecipeModel.fromJson(json)).toList();
+        } else {
+          return [];
+        }
+      } else {
+        throw Exception('Failed to load my created recipes: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching my created recipes: $e');
       throw Exception('Connection error: $e');
     }
   }
