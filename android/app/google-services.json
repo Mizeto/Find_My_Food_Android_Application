@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "785389873285",
+    "project_id": "find-my-food-9c9de",
+    "storage_bucket": "find-my-food-9c9de.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:785389873285:android:37dbd247648ca7c0ff21ec",
+        "android_client_info": {
+          "package_name": "com.example.find_my_food"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCPAwQlAcVLtrSVSDmnyaUsDqKG102pgvo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:785389873285:android:71ac478a5cfb2110ff21ec",
+        "android_client_info": {
+          "package_name": "com.find_my_food_noti.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCPAwQlAcVLtrSVSDmnyaUsDqKG102pgvo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -31,7 +31,8 @@ class RecipeRepository {
           cookingMethod: method,
           imageUrl: apiRecipe.imageUrl,
           prepTime: apiRecipe.cookingTimeMin, // Use actual time from API
-          likeCount: apiRecipe.likeCount, // Add this
+          likeCount: apiRecipe.likeCount,
+          isLiked: apiRecipe.isLiked,
         );
       }).toList();
 
@@ -69,7 +70,8 @@ class RecipeRepository {
           cookingMethod: method,
           imageUrl: apiRecipe.imageUrl,
           prepTime: apiRecipe.cookingTimeMin,
-          likeCount: apiRecipe.likeCount, // Add this
+          likeCount: apiRecipe.likeCount,
+          isLiked: apiRecipe.isLiked,
           ingredients: ingredientItems,
        );
     } catch (e) {
@@ -164,8 +166,26 @@ class RecipeRepository {
         cookingMethod: method,
         imageUrl: apiRecipe.imageUrl,
         prepTime: apiRecipe.cookingTimeMin,
-        likeCount: apiRecipe.likeCount, // Add this
+        likeCount: apiRecipe.likeCount,
+        isLiked: apiRecipe.isLiked,
       );
     }).toList();
+  }
+
+  Future<Map<String, dynamic>?> likeRecipe(int recipeId) async {
+    return _recipeService.likeRecipe(recipeId);
+  }
+
+  Future<Map<String, dynamic>?> unlikeRecipe(int recipeId) async {
+    return _recipeService.unlikeRecipe(recipeId);
+  }
+
+  Future<List<Recipe>> getUserLikeRecipes() async {
+    try {
+      final apiRecipes = await _recipeService.getUserLikeRecipes();
+      return _mapRecipes(apiRecipes);
+    } catch (e) {
+      throw Exception('Error loading liked recipes: $e');
+    }
   }
 }

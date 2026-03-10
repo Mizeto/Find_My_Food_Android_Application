@@ -9,6 +9,7 @@ class RecipeModel {
   final String username;
   final String? createDate;
   final int likeCount; // Add this
+  final bool isLiked; // Add this
   final bool isPublic;
   final bool isActive;
 
@@ -24,6 +25,7 @@ class RecipeModel {
     required this.username,
     this.createDate,
     this.likeCount = 0,
+    this.isLiked = false,
     this.isPublic = true,
     this.isActive = true,
     this.ingredients,
@@ -43,6 +45,7 @@ class RecipeModel {
       username: json['username'] ?? '',
       createDate: json['create_date']?.toString(),
       likeCount: (json['like_count'] as num?)?.toInt() ?? 0,
+      isLiked: json['is_liked'] == true,
       isPublic: json['is_public'] == true,
       isActive: json['is_active'] == true,
       ingredients: ingredientsList?.map((i) => RecipeIngredient.fromJson(i)).toList(),
@@ -60,6 +63,7 @@ class RecipeModel {
       'username': username,
       'create_date': createDate,
       'like_count': likeCount,
+      'is_liked': isLiked,
       'is_public': isPublic,
       'is_active': isActive,
       'ingredients': ingredients?.map((i) => i.toJson()).toList(),

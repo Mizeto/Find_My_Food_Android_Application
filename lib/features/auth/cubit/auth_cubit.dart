@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../../profile/services/user_service.dart'; // Import UserService
+import '../../notification/services/notification_service.dart';
 
 // Auth States
 abstract class AuthState extends Equatable {
@@ -88,6 +89,7 @@ class AuthCubit extends Cubit<AuthState> {
           if (user.isGuest && user.guestUuid != null) {
             print('DEBUG: Restoring guest session with UUID: ${user.guestUuid}');
             emit(AuthAuthenticated(user));
+            NotificationService().syncToken();
             return;
           }
           
@@ -95,6 +97,7 @@ class AuthCubit extends Cubit<AuthState> {
           final token = await _authService.getToken();
           if (token != null && token.isNotEmpty) {
             emit(AuthAuthenticated(user));
+            NotificationService().syncToken();
             return;
           } else {
             // Token missing — cache is stale, force re-login
@@ -158,6 +161,8 @@ class AuthCubit extends Cubit<AuthState> {
       
       await _cacheUser(finalUser);
       emit(AuthAuthenticated(finalUser));
+      // Trigger FCM sync after login
+      NotificationService().syncToken();
     } catch (e) {
       print('DEBUG: Login Error: $e');
       String msg = e.toString().replaceAll('Exception: ', '');

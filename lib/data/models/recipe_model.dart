@@ -25,6 +25,7 @@ class Recipe {
   final String imageUrl;
   final int prepTime;
   final int likeCount; // Add likeCount
+  final bool isLiked; // Add this
   final List<RecipeIngredientItem>? ingredients;
 
   Recipe({
@@ -35,6 +36,7 @@ class Recipe {
     required this.imageUrl,
     required this.prepTime,
     this.likeCount = 0, // default 0
+    this.isLiked = false,
     this.ingredients, // optional
   });
 
@@ -49,6 +51,7 @@ class Recipe {
       ),
       prepTime: (json['prep_time'] as num?)?.toInt() ?? (json['cooking_time_min'] as num?)?.toInt() ?? 0,
       likeCount: (json['like_count'] as num?)?.toInt() ?? 0, 
+      isLiked: json['is_liked'] == true || json['is_liked'] == 1 || json['is_liked'] == "true",
       ingredients: null,
     );
   }

@@ -20,10 +20,12 @@ class RecipeDetailScreen extends StatefulWidget {
 class _RecipeDetailScreenState extends State<RecipeDetailScreen>
     with TickerProviderStateMixin {
   bool _isFavorite = false;
+  int _likeCount = 0;
   late AnimationController _favoriteController;
   late Animation<double> _favoriteAnimation;
   Recipe? _fullRecipe;
   bool _isLoadingDetails = true;
+  bool _isModified = false;
 
   @override
   void initState() {
@@ -35,7 +37,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
     _favoriteAnimation = Tween<double>(begin: 1, end: 1.3).animate(
       CurvedAnimation(parent: _favoriteController, curve: Curves.elasticOut),
     );
-    _loadFavorite();
+    _isFavorite = widget.recipe.isLiked;
+    _likeCount = widget.recipe.likeCount;
     _loadFullRecipe();
   }
 
@@ -49,6 +52,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
       if (mounted) {
         setState(() {
           _fullRecipe = fullRecipe;
+          _isFavorite = fullRecipe.isLiked;
+          _likeCount = fullRecipe.likeCount;
           _isLoadingDetails = false;
         });
       }
@@ -63,32 +68,36 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
     }
   }
 
-  Future<void> _loadFavorite() async {
-    final prefs = await SharedPreferences.getInstance();
-    final favorites = prefs.getStringList('favorites') ?? [];
-    setState(() {
-      _isFavorite = favorites.contains(widget.recipe.id.toString());
-    });
-  }
-
   Future<void> _toggleFavorite() async {
-    final prefs = await SharedPreferences.getInstance();
-    final favorites = prefs.getStringList('favorites') ?? [];
+    final repository = context.read<RecipeRepository>();
+    final currentRecipeId = widget.recipe.id;
 
-    if (_isFavorite) {
-      favorites.remove(widget.recipe.id.toString());
-    } else {
-      favorites.add(widget.recipe.id.toString());
-      _favoriteController.forward().then((_) {
-        _favoriteController.reverse();
-      });
-      HapticFeedback.lightImpact();
+    Map<String, dynamic>? data;
+    try {
+      if (_isFavorite) {
+        data = await repository.unlikeRecipe(currentRecipeId);
+      } else {
+        data = await repository.likeRecipe(currentRecipeId);
+        _favoriteController.forward().then((_) {
+          _favoriteController.reverse();
+        });
+        HapticFeedback.lightImpact();
+      }
+
+      if (data != null && mounted) {
+        setState(() {
+          _isFavorite = data!['is_liked'] ?? !_isFavorite;
+          _likeCount = (data!['like_count'] as num?)?.toInt() ?? _likeCount;
+          _isModified = true;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('เกิดข้อผิดพลาด: $e')),
+        );
+      }
     }
-
-    await prefs.setStringList('favorites', favorites);
-    setState(() {
-      _isFavorite = !_isFavorite;
-    });
   }
 
   @override
@@ -113,7 +122,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
               ),
               child: IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => Navigator.pop(context, _isModified),
               ),
             ),
             actions: [

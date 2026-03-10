@@ -368,8 +368,31 @@ class AuthService {
         throw Exception(error['detail'] ?? error['message'] ?? 'รีเซ็ตรหัสผ่านไม่สำเร็จ');
       }
     } catch (e) {
-      if (e is Exception && !e.toString().contains('Connection error')) rethrow;
       throw Exception('Connection error: $e');
+    }
+  }
+
+  /// PATCH /auth/updateFCMToken
+  Future<bool> updateFCMToken(String fcmToken) async {
+    try {
+      final token = await getToken();
+      if (token == null) return false;
+
+      final response = await http.patch(
+        Uri.parse('$baseUrl/auth/updateFCMToken'),
+        headers: {
+          'Content-Type': 'application/json',
+          'accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'fcm_token': fcmToken}),
+      );
+
+      print('Update FCM Token Response: ${response.statusCode} ${response.body}');
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      print('DEBUG: Error updating FCM token: $e');
+      return false;
     }
   }
 }

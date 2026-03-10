@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../data/models/recipe_model.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../auth/cubit/auth_cubit.dart';
+import '../bloc/home_bloc.dart';
 import '../screens/recipe_detail_screen.dart';
 
 class RecipeCard extends StatelessWidget {
@@ -31,8 +34,9 @@ class RecipeCard extends StatelessWidget {
         );
       },
       child: GestureDetector(
-        onTap: () {
-          Navigator.push(
+        onTap: () async {
+          final isGuest = context.read<AuthCubit>().isGuest;
+          final result = await Navigator.push(
             context,
             PageRouteBuilder(
               pageBuilder: (context, animation, secondaryAnimation) =>
@@ -47,9 +51,12 @@ class RecipeCard extends StatelessWidget {
               transitionDuration: const Duration(milliseconds: 300),
             ),
           );
+
+          if (result == true && context.mounted) {
+            context.read<HomeBloc>().add(LoadHomeRecipes(isGuest: isGuest));
+          }
         },
         child: Container(
-          margin: const EdgeInsets.only(bottom: 16),
           child: Card(
             clipBehavior: Clip.antiAlias,
             elevation: isHorizontal ? 2 : 4,
@@ -65,174 +72,107 @@ class RecipeCard extends StatelessWidget {
 
   Widget _buildVerticalLayout() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Image with Hero
-        Hero(
-          tag: 'recipe-image-${recipe.id}',
-          child: Stack(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Image with Heart Overlay
+          Stack(
             children: [
-              Image.network(
-                recipe.imageUrl,
-                height: 200,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    height: 200,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.grey[300]!,
-                          Colors.grey[200]!,
-                        ],
-                      ),
-                    ),
-                    child: const Center(
-                      child: Icon(Icons.broken_image,
-                          size: 50, color: Colors.grey),
-                    ),
-                  );
-                },
-              ),
-              // Gradient overlay
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.black.withValues(alpha: 0.3),
-                      ],
-                    ),
+              Hero(
+                tag: 'recipe-image-${recipe.id}',
+                child: Image.network(
+                  recipe.imageUrl,
+                  height: 110, // Matched to horizontal cards for consistency
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    height: 110,
+                    color: Colors.grey[200],
+                    child: const Icon(Icons.broken_image, color: Colors.grey),
                   ),
                 ),
               ),
-              // Time badge
               Positioned(
-                top: 12,
-                right: 12,
+                top: 8,
+                right: 8,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(20),
+                  padding: const EdgeInsets.all(6),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 8,
+                        color: Colors.black12,
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
                       ),
                     ],
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                       Icon(
-                        Icons.access_time,
-                        size: 14,
+                  child: Icon(
+                    recipe.isLiked ? Icons.favorite : Icons.favorite_border,
+                    size: 18,
+                    color: recipe.isLiked ? Colors.red : Colors.grey,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          // Content
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  recipe.title,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.timer_outlined, size: 14, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${recipe.prepTime} นาที',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.favorite,
+                      size: 14,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${recipe.likeCount}',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryOrange.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.add,
+                        size: 16,
                         color: AppTheme.primaryOrange,
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${recipe.prepTime} นาที',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.primaryOrange,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-
-        // Content
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                recipe.title,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                recipe.description,
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  height: 1.4,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryGreen.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.restaurant,
-                          size: 14,
-                          color: AppTheme.primaryGreen,
-                        ),
-                        SizedBox(width: 4),
-                        Text(
-                          'ดูสูตร',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.primaryGreen,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Spacer(),
-                   Row(
-                    children: [
-                      const Icon(Icons.favorite, size: 14, color: Colors.red),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${recipe.likeCount}',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 12),
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    size: 16,
-                    color: Colors.grey[400],
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
+        ],
+      );
   }
 
   Widget _buildHorizontalLayout() {
@@ -280,9 +220,13 @@ class RecipeCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 4),
-                      Row(
+                       Row(
                         children: [
-                          const Icon(Icons.favorite, size: 12, color: Colors.red),
+                          Icon(
+                            recipe.isLiked ? Icons.favorite : Icons.favorite_border,
+                            size: 12,
+                            color: recipe.isLiked ? Colors.red : Colors.grey,
+                          ),
                           const SizedBox(width: 2),
                           Text(
                             '${recipe.likeCount}',

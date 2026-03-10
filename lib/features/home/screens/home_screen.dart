@@ -17,7 +17,12 @@ class HomeScreen extends StatelessWidget {
     final isDarkMode = context.watch<ThemeCubit>().isDarkMode;
 
     return Scaffold(
-      body: CustomScrollView(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          final isGuest = context.read<AuthCubit>().isGuest;
+          context.read<HomeBloc>().add(LoadHomeRecipes(isGuest: isGuest));
+        },
+        child: CustomScrollView(
         slivers: [
           // Gradient AppBar ที่สวยงาม
           SliverAppBar(
@@ -164,7 +169,7 @@ class HomeScreen extends StatelessWidget {
 
                       // 3. Main List Title
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12), // Matched to horizontal sections
                         child: Text(
                           state.recipes.isEmpty ? '' : 'ค้นหาเมนูอร่อย 🍳',
                           style: const TextStyle(
@@ -179,9 +184,16 @@ class HomeScreen extends StatelessWidget {
                       else
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: ListView.builder(
+                          child: GridView.builder(
+                            padding: EdgeInsets.zero, // Remove default top padding
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                              childAspectRatio: 0.72, // Increased vertical space to prevent overflow on various screen sizes
+                            ),
                             itemCount: state.recipes.length,
                             itemBuilder: (context, index) {
                               return RecipeCard(
@@ -206,7 +218,8 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      floatingActionButton: Builder(
+    ),
+    floatingActionButton: Builder(
         builder: (context) {
           final authState = context.watch<AuthCubit>().state;
           final isGuest = context.watch<AuthCubit>().isGuest;
@@ -371,7 +384,7 @@ class HomeScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12), // Reduced top padding from 16 to 8
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -393,7 +406,7 @@ class HomeScreen extends StatelessWidget {
           ),
         ),
         SizedBox(
-          height: 240,
+          height: 220, // Reduced from 240 to match more compact cards
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -481,12 +494,16 @@ class _RecommendationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isGuest = context.read<AuthCubit>().isGuest;
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        final result = await Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => RecipeDetailScreen(recipe: recipe)),
         );
+        if (result == true && context.mounted) {
+          context.read<HomeBloc>().add(LoadHomeRecipes(isGuest: isGuest));
+        }
       },
       child: Container(
         width: 200,
@@ -502,11 +519,11 @@ class _RecommendationCard extends StatelessWidget {
                 children: [
                    Image.network(
                     recipe.imageUrl,
-                    height: 130,
+                    height: 110, // Reduced from 115
                     width: double.infinity,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) => Container(
-                      height: 130,
+                      height: 110,
                       color: Colors.grey[200],
                       child: const Icon(Icons.broken_image, color: Colors.grey),
                     ),
@@ -519,8 +536,19 @@ class _RecommendationCard extends StatelessWidget {
                       decoration: const BoxDecoration(
                         color: Colors.white,
                         shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black12,
+                            blurRadius: 4,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
                       ),
-                      child: const Icon(Icons.favorite_border, size: 16, color: Colors.red),
+                      child: Icon(
+                        recipe.isLiked ? Icons.favorite : Icons.favorite_border,
+                        size: 18,
+                        color: recipe.isLiked ? Colors.red : Colors.grey,
+                      ),
                     ),
                   ),
                 ],

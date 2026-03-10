@@ -12,9 +12,10 @@ class RecipeService {
   Future<List<RecipeModel>> getAllRecipes() async {
     try {
       print('Fetching recipes from: $baseUrl/recipe/getAllRecipe');
+      final headers = await _getHeaders();
       final response = await http.get(
         Uri.parse('$baseUrl/recipe/getAllRecipe'),
-        headers: {'accept': 'application/json'},
+        headers: headers,
       ).timeout(const Duration(seconds: 60));
 
       if (response.statusCode == 200) {
@@ -40,9 +41,10 @@ class RecipeService {
     try {
       final encodedName = Uri.encodeComponent(name);
       print('Searching recipe: $baseUrl/recipegetRecipeByName/$encodedName');
+      final headers = await _getHeaders();
       final response = await http.get(
         Uri.parse('$baseUrl/recipegetRecipeByName/$encodedName'),
-        headers: {'accept': 'application/json'},
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
@@ -70,9 +72,10 @@ class RecipeService {
   Future<RecipeModel> getRecipeDetailById(int id) async {
     try {
       print('Fetching recipe detail: $baseUrl/recipe/getRecipeDetailById/$id');
+      final headers = await _getHeaders();
       final response = await http.get(
         Uri.parse('$baseUrl/recipe/getRecipeDetailById/$id'),
-        headers: {'accept': 'application/json'},
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
@@ -391,49 +394,12 @@ class RecipeService {
       return null;
     }
   }
-
+  
   // GET /recipe/getMyCreateRecipe - Get recipes created by current user
-  Future<List<RecipeModel>> getMyCreatedRecipes() async {
-    try {
-      final headers = await _getHeaders();
-      final getHeaders = {
-        'accept': 'application/json',
-        if (headers['Authorization'] != null) 'Authorization': headers['Authorization']!,
-      };
-      
-      print('Fetching my created recipes: $baseUrl/recipe/getMyCreateRecipe');
-      final response = await http.get(
-        Uri.parse('$baseUrl/recipe/getMyCreateRecipe'),
-        headers: getHeaders,
-      ).timeout(const Duration(seconds: 60));
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
-        
-        if (jsonResponse['status'] == 'success') {
-          final dynamic data = jsonResponse['data'];
-          if (data == null) return [];
-          if (data is List) {
-            return data.map((json) => RecipeModel.fromJson(json)).toList();
-          } else if (data is Map<String, dynamic>) {
-            return [RecipeModel.fromJson(data)];
-          }
-          return [];
-        } else {
-          print('API Error: ${jsonResponse['message']}');
-          return [];
-        }
-      } else {
-        throw Exception('Failed to load my recipes: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error fetching my recipes: $e');
-      throw Exception('Connection error: $e');
-    }
-  }
+  // (Redundant method removed, using getMyCreateRecipes below)
 
   // POST /recipe/likeRecipe/{recipe_id} - Like a recipe
-  Future<bool> likeRecipe(int recipeId) async {
+  Future<Map<String, dynamic>?> likeRecipe(int recipeId) async {
     try {
       final headers = await _getHeaders();
       print('Liking recipe: $baseUrl/recipe/likeRecipe/$recipeId');
@@ -445,10 +411,12 @@ class RecipeService {
 
       print('Like Recipe Response: ${response.statusCode} ${response.body}');
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final jsonResponse = jsonDecode(response.body);
-        return jsonResponse['status'] == 'success';
+        final Map<String, dynamic> jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
+        if (jsonResponse['status'] == 'success') {
+          return jsonResponse['data']; // Contains like_count and is_liked
+        }
       }
-      return false;
+      return null;
     } catch (e) {
       print('Error liking recipe: $e');
       throw Exception('Connection error: $e');
@@ -456,7 +424,7 @@ class RecipeService {
   }
 
   // DELETE /recipe/unlikeRecipe/{recipe_id} - Unlike a recipe
-  Future<bool> unlikeRecipe(int recipeId) async {
+  Future<Map<String, dynamic>?> unlikeRecipe(int recipeId) async {
     try {
       final headers = await _getHeaders();
       print('Unliking recipe: $baseUrl/recipe/unlikeRecipe/$recipeId');
@@ -468,12 +436,41 @@ class RecipeService {
 
       print('Unlike Recipe Response: ${response.statusCode} ${response.body}');
       if (response.statusCode == 200) {
-        final jsonResponse = jsonDecode(response.body);
-        return jsonResponse['status'] == 'success';
+        final Map<String, dynamic> jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
+        if (jsonResponse['status'] == 'success') {
+          return jsonResponse['data']; // Contains like_count and is_liked
+        }
       }
-      return false;
+      return null;
     } catch (e) {
       print('Error unliking recipe: $e');
+      throw Exception('Connection error: $e');
+    }
+  }
+
+  // GET /users/getUserLikeRecipe - Get recipes liked by current user
+  Future<List<RecipeModel>> getUserLikeRecipes() async {
+    try {
+      final headers = await _getHeaders();
+      print('Fetching user liked recipes: $baseUrl/users/getUserLikeRecipe');
+      final response = await http.get(
+        Uri.parse('$baseUrl/users/getUserLikeRecipe'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
+        if (jsonResponse['status'] == 'success') {
+          final List<dynamic> data = jsonResponse['data'] ?? [];
+          return data.map((json) => RecipeModel.fromJson(json)).toList();
+        } else {
+          return [];
+        }
+      } else {
+        throw Exception('Failed to load liked recipes: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching liked recipes: $e');
       throw Exception('Connection error: $e');
     }
   }

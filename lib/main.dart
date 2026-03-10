@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 // Import theme
 import 'core/theme/app_theme.dart';
@@ -21,9 +22,18 @@ import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/google_register_screen.dart';
 import 'features/profile/screens/profile_screen.dart';
 import 'features/scan_food/screens/scan_food_screen.dart';
+import 'features/notification/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  try {
+    await Firebase.initializeApp();
+    await NotificationService().initialize();
+  } catch (e) {
+    print('❌ Firebase Initialization Error: $e');
+  }
+  
   await initializeDateFormatting('th', null);
 
   runApp(const MyApp());

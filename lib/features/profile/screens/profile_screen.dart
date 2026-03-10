@@ -7,6 +7,7 @@ import '../../auth/services/auth_service.dart';
 import 'edit_profile_screen.dart';
 import './user_stock_screen.dart';
 import './my_recipes_screen.dart';
+import './liked_recipes_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -249,6 +250,7 @@ class _ProfileMenu extends StatelessWidget {
       _MenuItem(Icons.person_outline, 'โปรไฟล์'),
       _MenuItem(Icons.kitchen_outlined, 'จัดการวัตถุดิบ (ตู้เย็น)'),
       _MenuItem(Icons.restaurant_menu_outlined, 'สูตรอาหารของฉัน'),
+      _MenuItem(Icons.favorite_outline, 'เมนูที่ถูกใจ'),
       _MenuItem(Icons.send_outlined, 'ส่งข้อเสนอแนะ'),
     ];
 
@@ -280,6 +282,13 @@ class _ProfileMenu extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) => const MyRecipesScreen(),
+                  ),
+                );
+              } else if (item.title == 'เมนูที่ถูกใจ') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const LikedRecipesScreen(),
                   ),
                 );
               } else if (item.title == 'ส่งข้อเสนอแนะ') {
