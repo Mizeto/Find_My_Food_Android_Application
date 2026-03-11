@@ -8,6 +8,8 @@ import '../../auth/cubit/auth_cubit.dart';
 import 'recipe_detail_screen.dart';
 import 'add_food_screen.dart';
 import '../widgets/recipe_card.dart';
+import '../../notification/bloc/notification_bloc.dart';
+import '../../notification/screens/notification_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -18,6 +20,8 @@ class HomeScreen extends StatelessWidget {
 
     return Scaffold(
       body: RefreshIndicator(
+        edgeOffset: 120, // Start below the app bar area
+        displacement: 40, // How far it moves down during the refresh
         onRefresh: () async {
           final isGuest = context.read<AuthCubit>().isGuest;
           context.read<HomeBloc>().add(LoadHomeRecipes(isGuest: isGuest));
@@ -69,17 +73,32 @@ class HomeScreen extends StatelessWidget {
             ),
             actions: [
               // Theme toggle button
-              IconButton(
-                icon: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  child: Icon(
-                    isDarkMode ? Icons.light_mode : Icons.dark_mode,
-                    key: ValueKey(isDarkMode),
-                    color: Colors.white,
-                  ),
-                ),
-                onPressed: () {
-                  context.read<ThemeCubit>().toggleTheme();
+              BlocBuilder<NotificationBloc, NotificationState>(
+                builder: (context, state) {
+                  int unreadCount = 0;
+                  if (state is NotificationLoaded) {
+                    unreadCount = state.unreadCount;
+                  }
+
+                  return IconButton(
+                    icon: Badge(
+                      label: unreadCount > 0 ? Text(unreadCount.toString()) : null,
+                      isLabelVisible: unreadCount > 0,
+                      backgroundColor: Colors.red,
+                      child: const Icon(
+                        Icons.notifications_outlined,
+                        color: Colors.white,
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const NotificationScreen(),
+                        ),
+                      );
+                    },
+                  );
                 },
               ),
               const SizedBox(width: 8),
@@ -167,9 +186,18 @@ class HomeScreen extends StatelessWidget {
                           isDarkMode: isDarkMode,
                         ),
 
-                      // 3. Main List Title
+                      // 3. Category Chips
+                      if (state.categories.isNotEmpty)
+                        _buildCategoryChips(
+                          context: context,
+                          categories: state.categories,
+                          selectedId: state.selectedCategoryId,
+                          isDarkMode: isDarkMode,
+                        ),
+
+                      // 4. Main List Title
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12), // Matched to horizontal sections
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                         child: Text(
                           state.recipes.isEmpty ? '' : 'ค้นหาเมนูอร่อย 🍳',
                           style: const TextStyle(
@@ -243,6 +271,84 @@ class HomeScreen extends StatelessWidget {
             child: const Icon(Icons.add, color: Colors.white),
           );
         }
+      ),
+    );
+  }
+
+  Widget _buildCategoryChips({
+    required BuildContext context,
+    required List<Map<String, dynamic>> categories,
+    required int? selectedId,
+    required bool isDarkMode,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 16, 0, 0),
+      child: SizedBox(
+        height: 42,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: categories.length + 1, // +1 for "ทั้งหมด"
+          itemBuilder: (context, index) {
+            final isAll = index == 0;
+            final isSelected = isAll
+                ? selectedId == null
+                : categories[index - 1]['category_id'] == selectedId;
+            final label = isAll
+                ? 'ทั้งหมด'
+                : categories[index - 1]['category_name'] ?? '';
+
+            return Padding(
+              padding: EdgeInsets.only(right: index < categories.length ? 8 : 0),
+              child: GestureDetector(
+                onTap: () {
+                  context.read<HomeBloc>().add(
+                    SelectCategory(isAll ? null : categories[index - 1]['category_id']),
+                  );
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  decoration: BoxDecoration(
+                    gradient: isSelected ? AppTheme.primaryGradient : null,
+                    color: isSelected
+                        ? null
+                        : (isDarkMode ? const Color(0xFF1E2D4A) : Colors.grey[100]),
+                    borderRadius: BorderRadius.circular(20),
+                    border: isSelected
+                        ? null
+                        : Border.all(
+                            color: isDarkMode
+                                ? Colors.grey[700]!
+                                : Colors.grey[300]!,
+                          ),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: AppTheme.primaryOrange.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Center(
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        color: isSelected
+                            ? Colors.white
+                            : (isDarkMode ? Colors.grey[300] : Colors.grey[700]),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }

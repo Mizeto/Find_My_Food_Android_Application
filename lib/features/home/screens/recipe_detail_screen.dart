@@ -167,12 +167,12 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                 StretchMode.zoomBackground,
                 StretchMode.blurBackground,
               ],
-              background: Hero(
-                tag: 'recipe-image-${displayRecipe.id}',
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.network(
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Hero(
+                    tag: 'recipe-image-${displayRecipe.id}',
+                    child: Image.network(
                       displayRecipe.imageUrl,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) => Container(
@@ -186,8 +186,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                         ),
                       ),
                     ),
-                    // Gradient overlay
-                    Container(
+                  ),
+                  // Gradient overlay
+                  Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
@@ -210,8 +211,10 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                         children: [
                           Text(
                             displayRecipe.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                              fontSize: 28,
+                              fontSize: 26,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
                               shadows: [
@@ -243,8 +246,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                         ],
                       ),
                     ),
-                  ],
-                ),
+                ],
               ),
             ),
           ),
@@ -427,12 +429,16 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                 child: Icon(icon, color: color, size: 24),
               ),
               const SizedBox(width: 12),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: color,
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],

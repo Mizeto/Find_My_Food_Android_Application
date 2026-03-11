@@ -756,4 +756,49 @@ class RecipeService {
       return null;
     }
   }
+
+  // GET /recipe/getRecipeCategory
+  Future<List<Map<String, dynamic>>> getRecipeCategories() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/recipe/getRecipeCategory'),
+        headers: {'Accept': 'application/json'},
+      ).timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
+        if (jsonResponse['status'] == 'success') {
+          final List<dynamic> data = jsonResponse['data'];
+          return data.cast<Map<String, dynamic>>();
+        }
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching categories: $e');
+      return [];
+    }
+  }
+
+  // GET /recipe/getRecipeByCategory/{category_id}
+  Future<List<RecipeModel>> getRecipeByCategory(int categoryId) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$baseUrl/recipe/getRecipeByCategory/$categoryId'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 60));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
+        if (jsonResponse['status'] == 'success') {
+          final List<dynamic> data = jsonResponse['data'];
+          return data.map((json) => RecipeModel.fromJson(json)).toList();
+        }
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching recipes by category: $e');
+      return [];
+    }
+  }
 }

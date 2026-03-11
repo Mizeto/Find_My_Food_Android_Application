@@ -14,6 +14,8 @@ import 'data/repositories/recipe_repository.dart';
 // Import blocs/cubits
 import 'features/home/bloc/home_bloc.dart';
 import 'features/auth/cubit/auth_cubit.dart';
+import 'features/notification/bloc/notification_bloc.dart';
+import 'features/notification/services/notification_api_service.dart';
 
 // Import screens
 import 'features/home/screens/home_screen.dart';
@@ -54,6 +56,12 @@ class MyApp extends StatelessWidget {
 
         // Repository Provider
         RepositoryProvider(create: (context) => RecipeRepository()),
+
+        // Notification Bloc
+        BlocProvider(
+          create: (context) => NotificationBloc(NotificationApiService())
+            ..add(FetchNotifications()),
+        ),
 
       ],
       child: BlocBuilder<ThemeCubit, bool>(

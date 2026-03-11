@@ -23,3 +23,15 @@ class SearchRecipes extends HomeEvent {
   @override
   List<Object> get props => [query];
 }
+
+// คำสั่ง: "โหลดหมวดหมู่อาหารมาให้หน่อย"
+class LoadCategories extends HomeEvent {}
+
+// คำสั่ง: "กรองตามหมวดหมู่นี้ให้หน่อย"
+class SelectCategory extends HomeEvent {
+  final int? categoryId; // null = ทั้งหมด
+  SelectCategory(this.categoryId);
+
+  @override
+  List<Object> get props => [categoryId ?? -1];
+}

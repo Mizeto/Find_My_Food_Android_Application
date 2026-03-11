@@ -188,4 +188,17 @@ class RecipeRepository {
       throw Exception('Error loading liked recipes: $e');
     }
   }
+
+  Future<List<Map<String, dynamic>>> getCategories() async {
+    return _recipeService.getRecipeCategories();
+  }
+
+  Future<List<Recipe>> getRecipesByCategory(int categoryId) async {
+    try {
+      final apiRecipes = await _recipeService.getRecipeByCategory(categoryId);
+      return _mapRecipes(apiRecipes);
+    } catch (e) {
+      throw Exception('Error loading recipes by category: $e');
+    }
+  }
 }

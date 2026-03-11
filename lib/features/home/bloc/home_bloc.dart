@@ -14,10 +14,15 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<LoadHomeRecipes>((event, emit) async {
       emit(HomeLoading());
       try {
+        // Fetch categories separately to avoid type casting issues with Future.wait
+        final categories = await repository.getCategories();
+        
         if (event.isGuest) {
-          // Guest: only load main recipes, skip recommendations
           final recipes = await repository.getRecipes();
-          emit(HomeLoaded(recipes: recipes));
+          emit(HomeLoaded(
+            recipes: recipes,
+            categories: categories,
+          ));
         } else {
           final results = await Future.wait([
             repository.getRecipes(),
@@ -29,6 +34,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
             recipes: results[0] as List<Recipe>,
             recommendedForYou: results[1] as List<Recipe>,
             recommendedFromStock: results[2] as List<Recipe>,
+            categories: categories,
           ));
         }
       } catch (e) {
@@ -40,9 +46,50 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<SearchRecipes>((event, emit) async {
       emit(HomeLoading()); // หมุนติ้วๆ
       try {
-        // เมื่อค้นหา เราจะแสดงเฉพาะผลการค้นหา (หรืออาจจะเก็บ Recommend ไว้ก็ได้ แต่ในที่นี้ขอแสดงเฉพาะผลค้นหาเพื่อความเคลียร์)
         final recipes = await repository.getRecipes(search: event.query);
         emit(HomeLoaded(recipes: recipes));
+      } catch (e) {
+        emit(HomeError(e.toString()));
+      }
+    });
+
+    // Event: โหลดหมวดหมู่
+    on<LoadCategories>((event, emit) async {
+      try {
+        final categories = await repository.getCategories();
+        if (state is HomeLoaded) {
+          emit((state as HomeLoaded).copyWith(categories: categories));
+        }
+      } catch (e) {
+        // Silently fail - categories are not critical
+      }
+    });
+
+    // Event: เลือกหมวดหมู่
+    on<SelectCategory>((event, emit) async {
+      final currentState = state;
+      if (currentState is! HomeLoaded) return;
+
+      // Preserve categories when switching
+      final categories = currentState.categories;
+
+      emit(HomeLoading());
+      try {
+        List<Recipe> recipes;
+        if (event.categoryId == null) {
+          // "ทั้งหมด" - load all recipes
+          recipes = await repository.getRecipes();
+        } else {
+          recipes = await repository.getRecipesByCategory(event.categoryId!);
+        }
+
+        emit(HomeLoaded(
+          recipes: recipes,
+          recommendedForYou: currentState.recommendedForYou,
+          recommendedFromStock: currentState.recommendedFromStock,
+          categories: categories,
+          selectedCategoryId: event.categoryId,
+        ));
       } catch (e) {
         emit(HomeError(e.toString()));
       }
