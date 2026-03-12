@@ -30,9 +30,10 @@ class RecipeRepository {
           description: apiRecipe.description.isNotEmpty ? apiRecipe.description : 'ไม่มีคำอธิบาย',
           cookingMethod: method,
           imageUrl: apiRecipe.imageUrl,
-          prepTime: apiRecipe.cookingTimeMin, // Use actual time from API
+          prepTime: apiRecipe.cookingTimeMin,
           likeCount: apiRecipe.likeCount,
           isLiked: apiRecipe.isLiked,
+          tags: apiRecipe.tags,
         );
       }).toList();
 
@@ -63,6 +64,19 @@ class RecipeRepository {
           )).toList();
        }
 
+       // Map category and tag details into a unified tags list for display
+       List<String> combinedTags = [];
+       if (apiRecipe.categoryDetails != null && apiRecipe.categoryDetails!.isNotEmpty) {
+           combinedTags.addAll(apiRecipe.categoryDetails!.map((c) => c.categoryName));
+       }
+       
+       if (apiRecipe.tagDetails != null && apiRecipe.tagDetails!.isNotEmpty) {
+           combinedTags.addAll(apiRecipe.tagDetails!.map((t) => t.tagName));
+       } else if (apiRecipe.tags != null) {
+           // Fallback to basic tags array if details not available
+           combinedTags.addAll(apiRecipe.tags!);
+       }
+
        return Recipe(
           id: apiRecipe.recipeId,
           title: apiRecipe.recipeName,
@@ -72,6 +86,7 @@ class RecipeRepository {
           prepTime: apiRecipe.cookingTimeMin,
           likeCount: apiRecipe.likeCount,
           isLiked: apiRecipe.isLiked,
+          tags: combinedTags.isNotEmpty ? combinedTags : null,
           ingredients: ingredientItems,
        );
     } catch (e) {
@@ -80,6 +95,14 @@ class RecipeRepository {
   }
   Future<bool> createRecipe(Map<String, dynamic> data) async {
     return _recipeService.createNewRecipe(data);
+  }
+
+  Future<List<CategoryModel>> getCategoryModels() async {
+    return _recipeService.getRecipeCategory();
+  }
+
+  Future<List<TagModel>> getTags() async {
+    return _recipeService.getRecipeTag();
   }
 
   Future<String?> uploadImage(String filePath) async {
@@ -168,6 +191,7 @@ class RecipeRepository {
         prepTime: apiRecipe.cookingTimeMin,
         likeCount: apiRecipe.likeCount,
         isLiked: apiRecipe.isLiked,
+        tags: apiRecipe.tags,
       );
     }).toList();
   }
@@ -199,6 +223,25 @@ class RecipeRepository {
       return _mapRecipes(apiRecipes);
     } catch (e) {
       throw Exception('Error loading recipes by category: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> getFilterOptions() async {
+    return _recipeService.getRecipeFilterOption();
+  }
+
+  Future<List<Recipe>> searchWithFilter({
+    List<int>? categoryIds,
+    List<int>? tagIds,
+  }) async {
+    try {
+      final apiRecipes = await _recipeService.getSearchRecipeFilterOption(
+        categoryIds: categoryIds,
+        tagIds: tagIds,
+      );
+      return _mapRecipes(apiRecipes);
+    } catch (e) {
+      throw Exception('Error searching with filter: $e');
     }
   }
 }

@@ -12,6 +12,9 @@ class RecipeModel {
   final bool isLiked; // Add this
   final bool isPublic;
   final bool isActive;
+  final List<String>? tags;
+  final List<CategoryModel>? categoryDetails;
+  final List<TagModel>? tagDetails;
 
   final List<RecipeIngredient>? ingredients;
   final List<RecipeStep>? steps;
@@ -28,6 +31,9 @@ class RecipeModel {
     this.isLiked = false,
     this.isPublic = true,
     this.isActive = true,
+    this.tags,
+    this.categoryDetails,
+    this.tagDetails,
     this.ingredients,
     this.steps,
   });
@@ -35,6 +41,16 @@ class RecipeModel {
   factory RecipeModel.fromJson(Map<String, dynamic> json) {
     var ingredientsList = json['ingredients'] as List?;
     var stepsList = json['steps'] as List?;
+
+    // Safe tags parsing
+    List<String> parsedTags = [];
+    try {
+      if (json['tags'] != null && json['tags'] is List) {
+        parsedTags = (json['tags'] as List).map((t) => t.toString()).toList();
+      }
+    } catch (_) {
+      parsedTags = [];
+    }
 
     return RecipeModel(
       recipeId: json['recipe_id'] ?? 0,
@@ -48,6 +64,13 @@ class RecipeModel {
       isLiked: json['is_liked'] == true,
       isPublic: json['is_public'] == true,
       isActive: json['is_active'] == true,
+      tags: parsedTags,
+      categoryDetails: json['category_details'] == null 
+          ? null 
+          : (json['category_details'] as List).map((c) => CategoryModel.fromJson(c)).toList(),
+      tagDetails: json['tag_details'] == null 
+          ? null 
+          : (json['tag_details'] as List).map((t) => TagModel.fromJson(t)).toList(),
       ingredients: ingredientsList?.map((i) => RecipeIngredient.fromJson(i)).toList(),
       steps: stepsList?.map((s) => RecipeStep.fromJson(s)).toList(),
     );
@@ -339,6 +362,54 @@ class UserStockUpdateRequest {
       'unit_id': unitId,
       'expire_date': expireDate,
       'storage_location': storageLocation,
+    };
+  }
+}
+
+class CategoryModel {
+  final int categoryId;
+  final String categoryName;
+
+  CategoryModel({
+    required this.categoryId,
+    required this.categoryName,
+  });
+
+  factory CategoryModel.fromJson(Map<String, dynamic> json) {
+    return CategoryModel(
+      categoryId: json['category_id'] ?? json['tag_id'] ?? 0, // In case of overlap format
+      categoryName: json['category_name'] ?? json['tag_name'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'category_id': categoryId,
+      'category_name': categoryName,
+    };
+  }
+}
+
+class TagModel {
+  final int tagId;
+  final String tagName;
+
+  TagModel({
+    required this.tagId,
+    required this.tagName,
+  });
+
+  factory TagModel.fromJson(Map<String, dynamic> json) {
+    return TagModel(
+      tagId: json['tag_id'] ?? 0,
+      tagName: json['tag_name'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'tag_id': tagId,
+      'tag_name': tagName,
     };
   }
 }

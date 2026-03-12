@@ -354,6 +354,38 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                   // Add to Shopping List Button
                   _buildAddToShoppingListButton(context),
 
+                  const SizedBox(height: 20),
+
+                  // Tags Section
+                  if (displayRecipe.tags != null && displayRecipe.tags!.isNotEmpty)
+                    _buildSectionCard(
+                      icon: Icons.local_offer,
+                      title: 'แท็ก 🏷️',
+                      color: Colors.blueAccent,
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: displayRecipe.tags!.map((tag) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.blueAccent.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.blueAccent.withValues(alpha: 0.3)),
+                            ),
+                            child: Text(
+                              '#$tag',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Colors.blueAccent,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+
                   const SizedBox(height: 100),
                 ],
               ),

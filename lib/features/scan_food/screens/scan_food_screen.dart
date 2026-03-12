@@ -120,8 +120,48 @@ class _ScanFoodViewState extends State<_ScanFoodView> {
               ),
             );
           } else if (state is ScanFoodError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message)),
+            String title = 'ข้อผิดพลาด';
+            String message = state.message;
+            IconData icon = Icons.error_outline;
+            Color iconColor = Colors.red;
+
+            if (state.message == 'NO_FOOD_DATA') {
+              title = 'ไม่พบข้อมูล';
+              message = 'เราไม่มีข้อมูลอาหารเมนูนี้ หรือ วัตถุดิบนี้เลยครับ ลองรูปอื่นดูนะ 🤔';
+              icon = Icons.search_off;
+              iconColor = Colors.orange;
+            } else if (state.message.contains('ไม่ใช่อาหาร')) {
+              title = 'ขออภัย';
+              icon = Icons.broken_image;
+              iconColor = Colors.redAccent;
+            } else {
+              // Catch all other messages gracefully
+              title = 'ขออภัย';
+            }
+
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                title: Row(
+                  children: [
+                    Icon(icon, color: iconColor),
+                    const SizedBox(width: 10),
+                    Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                content: Text(message),
+                actions: [
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryOrange,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: const Text('ตกลง', style: TextStyle(color: Colors.white)),
+                  ),
+                ],
+              ),
             );
           }
         },

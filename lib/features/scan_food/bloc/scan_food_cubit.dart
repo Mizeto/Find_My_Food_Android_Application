@@ -21,8 +21,13 @@ class ScanFoodCubit extends Cubit<ScanFoodState> {
         // 1. Predict Dish (via Backend API)
         final dishResult = await _recipeService.predictDishAI(image.path);
         
-        if (dishResult == null || dishResult.top3.isEmpty) {
-          emit(const ScanFoodError('ไม่สามารถวิเคราะห์เมนูอาหารได้'));
+        if (dishResult == null) {
+          emit(const ScanFoodError('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้'));
+          return;
+        }
+        
+        if (dishResult.top3.isEmpty && dishResult.ingredients.isEmpty) {
+          emit(const ScanFoodError('NO_FOOD_DATA'));
           return;
         }
         
@@ -34,8 +39,13 @@ class ScanFoodCubit extends Cubit<ScanFoodState> {
         // 2. Identify Ingredients/Recommend Recipes (via Backend API)
         final result = await _recipeService.analyzeIngredientImage(image.path);
 
-        if (result == null || (result.top3.isEmpty && (result.recipes == null || result.recipes!.isEmpty))) {
-          emit(const ScanFoodError('ไม่พบข้อมูลจากการวิเคราะห์'));
+        if (result == null) {
+          emit(const ScanFoodError('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้'));
+          return;
+        }
+
+        if (result.top3.isEmpty && result.ingredients.isEmpty && (result.recipes == null || result.recipes!.isEmpty)) {
+          emit(const ScanFoodError('NO_FOOD_DATA'));
           return;
         }
         

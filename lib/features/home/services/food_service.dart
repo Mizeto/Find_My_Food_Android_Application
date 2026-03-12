@@ -122,6 +122,114 @@ class RecipeService {
     return headers;
   }
 
+  // GET /recipe/getRecipeCategory
+  Future<List<CategoryModel>> getRecipeCategory() async {
+    try {
+      print('Fetching categories from: $baseUrl/recipe/getRecipeCategory');
+      final response = await http.get(
+        Uri.parse('$baseUrl/recipe/getRecipeCategory'),
+        headers: {'accept': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
+        if (jsonResponse['status'] == 'success') {
+          final List<dynamic> data = jsonResponse['data'];
+          return data.map((json) => CategoryModel.fromJson(json)).toList();
+        }
+      }
+      return [];
+    } catch (e) {
+      throw Exception('Connection error fetching categories: $e');
+    }
+  }
+
+  // GET /recipe/getRecipeTag
+  Future<List<TagModel>> getRecipeTag() async {
+    try {
+      print('Fetching tags from: $baseUrl/recipe/getRecipeTag');
+      final response = await http.get(
+        Uri.parse('$baseUrl/recipe/getRecipeTag'),
+        headers: {'accept': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
+        if (jsonResponse['status'] == 'success') {
+          final List<dynamic> data = jsonResponse['data'];
+          return data.map((json) => TagModel.fromJson(json)).toList();
+        }
+      }
+      return [];
+    } catch (e) {
+      throw Exception('Connection error fetching tags: $e');
+    }
+  }
+
+  // GET /recipe/getRecipeFilterOption
+  Future<Map<String, dynamic>> getRecipeFilterOption() async {
+    try {
+      print('Fetching filter options from: $baseUrl/recipe/getRecipeFilterOption');
+      final response = await http.get(
+        Uri.parse('$baseUrl/recipe/getRecipeFilterOption'),
+        headers: {'accept': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
+        if (jsonResponse['status'] == 'success') {
+          final data = jsonResponse['data'];
+          final categories = (data['categories'] as List?)
+              ?.map((c) => CategoryModel.fromJson(c))
+              .toList() ?? [];
+          final tags = (data['tags'] as List?)
+              ?.map((t) => TagModel.fromJson(t))
+              .toList() ?? [];
+          return {'categories': categories, 'tags': tags};
+        }
+      }
+      return {'categories': <CategoryModel>[], 'tags': <TagModel>[]};
+    } catch (e) {
+      throw Exception('Connection error fetching filter options: $e');
+    }
+  }
+
+  // GET /recipe/getSearchRecipeFilterOption
+  Future<List<RecipeModel>> getSearchRecipeFilterOption({
+    List<int>? categoryIds,
+    List<int>? tagIds,
+  }) async {
+    try {
+      final queryParams = <String, String>{};
+      if (categoryIds != null && categoryIds.isNotEmpty) {
+        queryParams['categories'] = categoryIds.join(',');
+      }
+      if (tagIds != null && tagIds.isNotEmpty) {
+        queryParams['tags'] = tagIds.join(',');
+      }
+
+      final uri = Uri.parse('$baseUrl/recipe/getSearchRecipeFilterOption')
+          .replace(queryParameters: queryParams);
+      print('Searching with filter: $uri');
+
+      final headers = await _getHeaders();
+      final response = await http.get(uri, headers: headers);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
+        if (jsonResponse['status'] == 'success') {
+          final List<dynamic> data = jsonResponse['data'];
+          return data.map((json) => RecipeModel.fromJson(json)).toList();
+        }
+        return [];
+      } else {
+        throw Exception('Failed to search with filter: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Connection error: $e');
+    }
+  }
+
   // POST /recipe/createNewRecipe
   Future<bool> createNewRecipe(Map<String, dynamic> recipeData) async {
     try {
@@ -325,9 +433,15 @@ class RecipeService {
         if (jsonResponse is Map<String, dynamic> && jsonResponse.containsKey('status')) {
           if (jsonResponse['status'] == 'success') {
              final data = jsonResponse['data'];
+             // Handle empty data
+             if (data == null || (data is List && data.isEmpty)) {
+               // Returning an empty DishAIResponse will trigger the NO_FOOD_DATA in Cubit
+               return DishAIResponse(top3: [], ingredients: [], recipes: []);
+             }
              return DishAIResponse.fromJson(data);
           } else {
-             throw Exception(jsonResponse['message'] ?? 'AI Prediction failed');
+             final msg = jsonResponse['message'] ?? 'อัปโหลดรูปภาพไม่สำเร็จ กรุณาลองใหม่';
+             throw Exception(msg);
           }
         } else {
           // Assume raw data directly
@@ -336,11 +450,23 @@ class RecipeService {
       } else {
         final errorBody = utf8.decode(response.bodyBytes);
         print('Dish AI Failed Response: $errorBody');
-        throw Exception('Failed to predict: ${response.statusCode} - $errorBody');
+        String? extractedMsg;
+        try {
+          final errJson = jsonDecode(errorBody);
+          if (errJson is Map<String, dynamic> && errJson.containsKey('message')) {
+            extractedMsg = errJson['message'];
+          }
+        } catch (_) {}
+        
+        if (extractedMsg != null) {
+          throw Exception(extractedMsg);
+        }
+        // Fallback
+        throw Exception(errorBody.isNotEmpty ? errorBody : 'Failed to predict: ${response.statusCode}');
       }
     } catch (e) {
       print('Error during Dish AI: $e');
-      return null;
+      rethrow;
     }
   }
 
@@ -377,16 +503,34 @@ class RecipeService {
         if (jsonResponse is Map<String, dynamic> && jsonResponse.containsKey('status')) {
           if (jsonResponse['status'] == 'success') {
             final data = jsonResponse['data'];
+            // Handle empty data
+            if (data == null || (data is List && data.isEmpty)) {
+              return DishAIResponse(top3: [], ingredients: [], recipes: []);
+            }
             // Since backend is returning recipes, we parse it as DishAIResponse
             return DishAIResponse.fromJson(data);
           } else {
             throw Exception(jsonResponse['message'] ?? 'Ingredient analysis failed');
           }
+        } else {
+           return DishAIResponse.fromJson(jsonResponse);
         }
       } else {
         final errorBody = utf8.decode(response.bodyBytes);
         print('Ingredient AI Failed Response: $errorBody');
-        throw Exception('Failed to analyze: ${response.statusCode} - $errorBody');
+        String? extractedMsg;
+        try {
+          final errJson = jsonDecode(errorBody);
+          if (errJson is Map<String, dynamic> && errJson.containsKey('message')) {
+            extractedMsg = errJson['message'];
+          }
+        } catch (_) {}
+        
+        if (extractedMsg != null) {
+          throw Exception(extractedMsg);
+        }
+        // Fallback
+        throw Exception(errorBody.isNotEmpty ? errorBody : 'Failed to analyze: ${response.statusCode}');
       }
       return null;
     } catch (e) {

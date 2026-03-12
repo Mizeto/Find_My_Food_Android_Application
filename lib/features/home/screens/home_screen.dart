@@ -10,6 +10,8 @@ import 'add_food_screen.dart';
 import '../widgets/recipe_card.dart';
 import '../../notification/bloc/notification_bloc.dart';
 import '../../notification/screens/notification_screen.dart';
+import '../models/food_model.dart';
+import '../services/food_service.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -128,13 +130,16 @@ class HomeScreen extends StatelessWidget {
                   decoration: InputDecoration(
                     hintText: 'วันนี้มีอะไรในตู้เย็น? (เช่น ไข่, หมู)',
                     prefixIcon: const Icon(Icons.search, color: AppTheme.primaryOrange),
-                    suffixIcon: Container(
-                      margin: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        gradient: AppTheme.primaryGradient,
-                        shape: BoxShape.circle,
+                    suffixIcon: GestureDetector(
+                      onTap: () => _showFilterSheet(context),
+                      child: Container(
+                        margin: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          gradient: AppTheme.primaryGradient,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.tune, color: Colors.white, size: 20),
                       ),
-                      child: const Icon(Icons.tune, color: Colors.white, size: 20),
                     ),
                     filled: true,
                     fillColor: isDarkMode ? const Color(0xFF16213E) : Colors.white,
@@ -212,24 +217,7 @@ class HomeScreen extends StatelessWidget {
                       else
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: GridView.builder(
-                            padding: EdgeInsets.zero, // Remove default top padding
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 12,
-                              mainAxisSpacing: 12,
-                              childAspectRatio: 0.72, // Increased vertical space to prevent overflow on various screen sizes
-                            ),
-                            itemCount: state.recipes.length,
-                            itemBuilder: (context, index) {
-                              return RecipeCard(
-                                recipe: state.recipes[index],
-                                index: index,
-                              );
-                            },
-                          ),
+                          child: _buildMasonryGrid(state.recipes),
                         ),
                     ],
                   );
@@ -480,6 +468,40 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildMasonryGrid(List<Recipe> recipes) {
+    final leftColumn = <Widget>[];
+    final rightColumn = <Widget>[];
+
+    for (int i = 0; i < recipes.length; i++) {
+      final card = Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: RecipeCard(recipe: recipes[i], index: i),
+      );
+      if (i.isEven) {
+        leftColumn.add(card);
+      } else {
+        rightColumn.add(card);
+      }
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            children: leftColumn,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            children: rightColumn,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildHorizontalSection({
     required BuildContext context,
     required String title,
@@ -512,7 +534,7 @@ class HomeScreen extends StatelessWidget {
           ),
         ),
         SizedBox(
-          height: 220, // Reduced from 240 to match more compact cards
+          height: 244, // Increased from 220 to accommodate tags
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -681,6 +703,37 @@ class _RecommendationCard extends StatelessWidget {
                         ),
                       ],
                     ),
+                    // recommendation tags
+                    if ((recipe.tags ?? []).isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      SizedBox(
+                        height: 20,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          separatorBuilder: (_, __) => const SizedBox(width: 4),
+                          itemCount: (recipe.tags ?? []).length > 2 ? 2 : (recipe.tags ?? []).length,
+                          itemBuilder: (context, i) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryOrange.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  (recipe.tags ?? [])[i],
+                                  style: const TextStyle(
+                                    fontSize: 9,
+                                    color: AppTheme.primaryOrange,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -707,6 +760,243 @@ class _RecommendationCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+void _showFilterSheet(BuildContext context) {
+    final recipeService = RecipeService();
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return FutureBuilder<Map<String, dynamic>>(
+          future: recipeService.getRecipeFilterOption(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Container(
+                height: 200,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                child: const Center(child: CircularProgressIndicator(color: AppTheme.primaryOrange)),
+              );
+            }
+
+            final categories = (snapshot.data?['categories'] as List<CategoryModel>?) ?? [];
+            final tags = (snapshot.data?['tags'] as List<TagModel>?) ?? [];
+
+            return _FilterSheetContent(
+              categories: categories,
+              tags: tags,
+              parentContext: context,
+            );
+          },
+        );
+      },
+    );
+  }
+
+class _FilterSheetContent extends StatefulWidget {
+  final List<CategoryModel> categories;
+  final List<TagModel> tags;
+  final BuildContext parentContext;
+
+  const _FilterSheetContent({
+    required this.categories,
+    required this.tags,
+    required this.parentContext,
+  });
+
+  @override
+  State<_FilterSheetContent> createState() => _FilterSheetContentState();
+}
+
+class _FilterSheetContentState extends State<_FilterSheetContent> {
+  final Set<int> _selectedCategoryIds = {};
+  final Set<int> _selectedTagIds = {};
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.7,
+      ),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Drag Handle
+          Container(
+            margin: const EdgeInsets.only(top: 12),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'ค้นหาด้วยตัวกรอง 🔍',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectedCategoryIds.clear();
+                      _selectedTagIds.clear();
+                    });
+                  },
+                  child: const Text('ล้างทั้งหมด', style: TextStyle(color: Colors.grey)),
+                ),
+              ],
+            ),
+          ),
+
+          const Divider(height: 1),
+
+          // Scrollable Content
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Categories
+                  if (widget.categories.isNotEmpty) ...[
+                    const Row(
+                      children: [
+                        Icon(Icons.category, color: AppTheme.primaryOrange, size: 20),
+                        SizedBox(width: 8),
+                        Text('หมวดหมู่', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: widget.categories.map((cat) {
+                        final isSelected = _selectedCategoryIds.contains(cat.categoryId);
+                        return FilterChip(
+                          label: Text(cat.categoryName),
+                          selected: isSelected,
+                          selectedColor: AppTheme.primaryOrange.withOpacity(0.2),
+                          checkmarkColor: AppTheme.primaryOrange,
+                          backgroundColor: Colors.grey[100],
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            side: BorderSide(
+                              color: isSelected ? AppTheme.primaryOrange : Colors.grey[300]!,
+                            ),
+                          ),
+                          onSelected: (_) {
+                            setState(() {
+                              if (isSelected) {
+                                _selectedCategoryIds.remove(cat.categoryId);
+                              } else {
+                                _selectedCategoryIds.add(cat.categoryId);
+                              }
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+
+                  // Tags
+                  if (widget.tags.isNotEmpty) ...[
+                    const Row(
+                      children: [
+                        Icon(Icons.local_offer, color: Colors.blueAccent, size: 20),
+                        SizedBox(width: 8),
+                        Text('แท็ก', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: widget.tags.map((tag) {
+                        final isSelected = _selectedTagIds.contains(tag.tagId);
+                        return FilterChip(
+                          label: Text('#${tag.tagName}'),
+                          selected: isSelected,
+                          selectedColor: Colors.blueAccent.withOpacity(0.2),
+                          checkmarkColor: Colors.blueAccent,
+                          backgroundColor: Colors.grey[100],
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            side: BorderSide(
+                              color: isSelected ? Colors.blueAccent : Colors.grey[300]!,
+                            ),
+                          ),
+                          onSelected: (_) {
+                            setState(() {
+                              if (isSelected) {
+                                _selectedTagIds.remove(tag.tagId);
+                              } else {
+                                _selectedTagIds.add(tag.tagId);
+                              }
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+
+          // Search Button
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            child: SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryOrange,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                  elevation: 4,
+                ),
+                onPressed: () {
+                  final categoryIds = _selectedCategoryIds.toList();
+                  final tagIds = _selectedTagIds.toList();
+
+                  if (categoryIds.isEmpty && tagIds.isEmpty) {
+                    // No filter selected → reload all
+                    widget.parentContext.read<HomeBloc>().add(LoadHomeRecipes());
+                  } else {
+                    widget.parentContext.read<HomeBloc>().add(
+                      FilterSearchRecipes(categoryIds: categoryIds, tagIds: tagIds),
+                    );
+                  }
+                  Navigator.pop(context);
+                },
+                child: const Text(
+                  'ค้นหา',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

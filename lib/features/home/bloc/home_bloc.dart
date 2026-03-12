@@ -94,5 +94,19 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         emit(HomeError(e.toString()));
       }
     });
+
+    // Event: ค้นหาตามฟิลเตอร์ (Categories + Tags)
+    on<FilterSearchRecipes>((event, emit) async {
+      emit(HomeLoading());
+      try {
+        final recipes = await repository.searchWithFilter(
+          categoryIds: event.categoryIds,
+          tagIds: event.tagIds,
+        );
+        emit(HomeLoaded(recipes: recipes));
+      } catch (e) {
+        emit(HomeError(e.toString()));
+      }
+    });
   }
 }

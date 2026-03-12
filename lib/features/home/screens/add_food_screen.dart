@@ -29,6 +29,12 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
 
   // Data
   List<UnitModel> _units = [];
+  List<CategoryModel> _availableCategories = [];
+  List<TagModel> _availableTags = [];
+  
+  // Selected
+  final Set<int> _selectedCategoryIds = {};
+  final Set<int> _selectedTagIds = {};
   
   // Dynamic Lists
   final List<Map<String, dynamic>> _ingredients = [
@@ -42,6 +48,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
   void initState() {
     super.initState();
     _loadUnits();
+    _loadCategoriesAndTags();
   }
 
   Future<void> _loadUnits() async {
@@ -52,6 +59,21 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
       });
     } catch (e) {
       print('Error loading units: $e');
+    }
+  }
+
+  Future<void> _loadCategoriesAndTags() async {
+    try {
+      final categories = await _recipeService.getRecipeCategory();
+      final tags = await _recipeService.getRecipeTag();
+      if (mounted) {
+        setState(() {
+          _availableCategories = categories;
+          _availableTags = tags;
+        });
+      }
+    } catch (e) {
+      print('Error loading categories/tags: $e');
     }
   }
 
@@ -204,6 +226,8 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
             'instruction': entry.value
           };
         }).toList(),
+        'categories': _selectedCategoryIds.toList(),
+        'tags': _selectedTagIds.toList(),
       };
 
       // 3. Create Recipe
@@ -369,6 +393,65 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                 value: _isPublic,
                 onChanged: (v) => setState(() => _isPublic = v),
               ),
+
+              const Divider(height: 40),
+
+              // Categories Section
+              if (_availableCategories.isNotEmpty) ...[
+                const Text('หมวดหมู่ (Categories)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _availableCategories.map((cat) {
+                    final isSelected = _selectedCategoryIds.contains(cat.categoryId);
+                    return FilterChip(
+                      label: Text(cat.categoryName),
+                      selected: isSelected,
+                      selectedColor: AppTheme.primaryOrange.withOpacity(0.2),
+                      checkmarkColor: AppTheme.primaryOrange,
+                      onSelected: (_) {
+                        setState(() {
+                          if (isSelected) {
+                            _selectedCategoryIds.remove(cat.categoryId);
+                          } else {
+                            _selectedCategoryIds.add(cat.categoryId);
+                          }
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // Tags Section
+              if (_availableTags.isNotEmpty) ...[
+                const Text('แท็ก (Tags)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _availableTags.map((tag) {
+                    final isSelected = _selectedTagIds.contains(tag.tagId);
+                    return FilterChip(
+                      label: Text('#${tag.tagName}'),
+                      selected: isSelected,
+                      selectedColor: Colors.blueAccent.withOpacity(0.2),
+                      checkmarkColor: Colors.blueAccent,
+                      onSelected: (_) {
+                        setState(() {
+                          if (isSelected) {
+                            _selectedTagIds.remove(tag.tagId);
+                          } else {
+                            _selectedTagIds.add(tag.tagId);
+                          }
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+              ],
 
               const Divider(height: 40),
 

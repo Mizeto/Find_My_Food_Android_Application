@@ -35,3 +35,13 @@ class SelectCategory extends HomeEvent {
   @override
   List<Object> get props => [categoryId ?? -1];
 }
+
+// คำสั่ง: "กรองค้นหาตาม Categories + Tags"
+class FilterSearchRecipes extends HomeEvent {
+  final List<int> categoryIds;
+  final List<int> tagIds;
+  FilterSearchRecipes({required this.categoryIds, required this.tagIds});
+
+  @override
+  List<Object> get props => [categoryIds, tagIds];
+}

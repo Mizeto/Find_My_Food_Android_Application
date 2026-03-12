@@ -140,7 +140,36 @@ class RecipeCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                // Tags
+                if ((recipe.tags ?? []).isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  SizedBox(
+                    height: 22,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      separatorBuilder: (_, __) => const SizedBox(width: 4),
+                      itemCount: (recipe.tags ?? []).length > 2 ? 2 : (recipe.tags ?? []).length,
+                      itemBuilder: (context, i) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryOrange.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            (recipe.tags ?? [])[i],
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: AppTheme.primaryOrange,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 6),
                 Row(
                   children: [
                     const Icon(
@@ -247,6 +276,37 @@ class RecipeCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const Spacer(),
+                  // Horizontal Layout Tags
+                  if ((recipe.tags ?? []).isNotEmpty) ...[
+                    SizedBox(
+                      height: 20,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        separatorBuilder: (_, __) => const SizedBox(width: 4),
+                        itemCount: (recipe.tags ?? []).length > 2 ? 2 : (recipe.tags ?? []).length,
+                        itemBuilder: (context, i) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryOrange.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Center(
+                              child: Text(
+                                (recipe.tags ?? [])[i],
+                                style: const TextStyle(
+                                  fontSize: 9,
+                                  color: AppTheme.primaryOrange,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                  ],
                   Row(
                     children: [
                       const Icon(Icons.access_time, size: 12, color: AppTheme.primaryOrange),

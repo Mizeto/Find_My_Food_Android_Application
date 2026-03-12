@@ -26,6 +26,7 @@ class Recipe {
   final int prepTime;
   final int likeCount; // Add likeCount
   final bool isLiked; // Add this
+  final List<String>? tags;
   final List<RecipeIngredientItem>? ingredients;
 
   Recipe({
@@ -37,10 +38,19 @@ class Recipe {
     required this.prepTime,
     this.likeCount = 0, // default 0
     this.isLiked = false,
+    this.tags,
     this.ingredients, // optional
   });
 
   factory Recipe.fromJson(Map<String, dynamic> json) {
+    // Safe tags parsing
+    List<String> parsedTags = [];
+    try {
+      if (json['tags'] != null && json['tags'] is List) {
+        parsedTags = (json['tags'] as List).map((t) => t.toString()).toList();
+      }
+    } catch (_) {}
+
     return Recipe(
       id: json['recipe_id'] ?? 0,
       title: json['title']?.toString() ?? json['recipe_name']?.toString() ?? '',
@@ -52,6 +62,7 @@ class Recipe {
       prepTime: (json['prep_time'] as num?)?.toInt() ?? (json['cooking_time_min'] as num?)?.toInt() ?? 0,
       likeCount: (json['like_count'] as num?)?.toInt() ?? 0, 
       isLiked: json['is_liked'] == true || json['is_liked'] == 1 || json['is_liked'] == "true",
+      tags: parsedTags,
       ingredients: null,
     );
   }
