@@ -32,7 +32,14 @@ class AuthAuthenticated extends AuthState {
   List<Object?> get props => [user, message];
 }
 
-class AuthUnauthenticated extends AuthState {}
+class AuthUnauthenticated extends AuthState {
+  final bool isOnboardingCompleted;
+
+  const AuthUnauthenticated({this.isOnboardingCompleted = false});
+
+  @override
+  List<Object?> get props => [isOnboardingCompleted];
+}
 
 class AuthError extends AuthState {
   final String message;
@@ -60,10 +67,11 @@ class AuthCubit extends Cubit<AuthState> {
   final UserService _userService; // Add UserService
   static const String _userKey = 'cached_user';
   static const String _guestUuidKey = 'guest_uuid';
+  static const String _onboardingKey = 'onboarding_completed';
   
   // Define GoogleSignIn instance once
   final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: ['email', 'profile'],
+    scopes: ['email', 'profile', 'openid'],
     serverClientId: '717179936950-aolfunbngehe1fj91bj8bp7uhufpvbnt.apps.googleusercontent.com',
   );
 
@@ -89,7 +97,11 @@ class AuthCubit extends Cubit<AuthState> {
           if (user.isGuest && user.guestUuid != null) {
             print('DEBUG: Restoring guest session with UUID: ${user.guestUuid}');
             emit(AuthAuthenticated(user));
-            NotificationService().syncToken();
+            try {
+              NotificationService().syncToken();
+            } catch (e) {
+              print('DEBUG: Silent notification sync error (guest): $e');
+            }
             return;
           }
           
@@ -97,7 +109,11 @@ class AuthCubit extends Cubit<AuthState> {
           final token = await _authService.getToken();
           if (token != null && token.isNotEmpty) {
             emit(AuthAuthenticated(user));
-            NotificationService().syncToken();
+            try {
+              NotificationService().syncToken();
+            } catch (e) {
+              print('DEBUG: Silent notification sync error (regular): $e');
+            }
             return;
           } else {
             // Token missing — cache is stale, force re-login
@@ -124,9 +140,23 @@ class AuthCubit extends Cubit<AuthState> {
         print('DEBUG: Silent Google Sign In failed: $e');
       }
 
-      emit(AuthUnauthenticated());
+      final onboardingCompleted = prefs.getBool(_onboardingKey) ?? false;
+      emit(AuthUnauthenticated(isOnboardingCompleted: onboardingCompleted));
     } catch (e) {
-      emit(AuthUnauthenticated());
+      final prefs = await SharedPreferences.getInstance();
+      final onboardingCompleted = prefs.getBool(_onboardingKey) ?? false;
+      emit(AuthUnauthenticated(isOnboardingCompleted: onboardingCompleted));
+    }
+  }
+
+  // Mark onboarding as completed
+  Future<void> completeOnboarding() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_onboardingKey, true);
+      emit(const AuthUnauthenticated(isOnboardingCompleted: true));
+    } catch (e) {
+      print('DEBUG: completeOnboarding error: $e');
     }
   }
 
@@ -161,8 +191,12 @@ class AuthCubit extends Cubit<AuthState> {
       
       await _cacheUser(finalUser);
       emit(AuthAuthenticated(finalUser));
-      // Trigger FCM sync after login
-      NotificationService().syncToken();
+      // Trigger FCM sync after login - wrap in try-catch to prevent app crash if Firebase fails
+      try {
+        NotificationService().syncToken();
+      } catch (e) {
+        print('DEBUG: Silent notification sync error: $e');
+      }
     } catch (e) {
       print('DEBUG: Login Error: $e');
       String msg = e.toString().replaceAll('Exception: ', '');
@@ -235,10 +269,13 @@ class AuthCubit extends Cubit<AuthState> {
 
   // Helper method to process Google User (used by both signInWithGoogle and checkAuthStatus)
   Future<void> _handleGoogleUser(GoogleSignInAccount googleUser) async {
+      print('DEBUG: googleUser: ${googleUser.email}, ID: ${googleUser.id}');
+      print('DEBUG: serverClientId configured: 717179936950-aolfunbngehe1fj91bj8bp7uhufpvbnt.apps.googleusercontent.com');
       print('DEBUG: Getting authentication/idToken...');
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       final String? idToken = googleAuth.idToken;
-      print('DEBUG: idToken received: ${idToken != null ? "YES (Length: ${idToken.length})" : "NO"}');
+      print('DEBUG: idToken received: ${idToken != null ? "YES (Length: ${idToken.length}, Start: ${idToken.substring(0, 10)}...)" : "NO"}');
+      print('DEBUG: serverAuthCode: ${googleAuth.serverAuthCode != null ? "YES" : "NO"}');
       
       if (idToken == null) {
         throw Exception('ไม่สามารถรับ ID Token จาก Google ได้');
@@ -434,13 +471,19 @@ class AuthCubit extends Cubit<AuthState> {
 
       // Clear cached user, auth token, AND guest UUID
       final prefs = await SharedPreferences.getInstance();
+      final onboardingCompleted = prefs.getBool(_onboardingKey) ?? false;
+      
       await prefs.remove(_userKey);
       await prefs.remove(_guestUuidKey);
       await _authService.clearToken();
 
-      emit(AuthUnauthenticated());
+      emit(AuthUnauthenticated(isOnboardingCompleted: onboardingCompleted));
     } catch (e) {
+      final prefs = await SharedPreferences.getInstance();
+      final onboardingCompleted = prefs.getBool(_onboardingKey) ?? false;
       emit(AuthError('เกิดข้อผิดพลาดในการออกจากระบบ: ${e.toString()}'));
+      // Fallback but preserve onboarding flag
+      emit(AuthUnauthenticated(isOnboardingCompleted: onboardingCompleted));
     }
   }
 
@@ -462,8 +505,14 @@ class AuthCubit extends Cubit<AuthState> {
   bool get isAuthenticated => state is AuthAuthenticated;
 
   bool get isGuest {
-    final user = currentUser;
-    return user?.isGuest ?? false;
+    try {
+      final user = currentUser;
+      final result = user?.isGuest ?? false;
+      return result;
+    } catch (e) {
+      print('DEBUG: isGuest check error: $e');
+      return false;
+    }
   }
 
   // Update Username

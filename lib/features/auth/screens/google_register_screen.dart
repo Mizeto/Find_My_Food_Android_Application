@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../cubit/auth_cubit.dart';
+import '../../../core/utils/responsive_helper.dart';
 
 class GoogleRegisterScreen extends StatefulWidget {
   final String tempToken;
@@ -96,7 +97,7 @@ class _GoogleRegisterScreenState extends State<GoogleRegisterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ข้อมูลเพิ่มเติม'),
+        title: Text('ข้อมูลเพิ่มเติม', style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold, color: Colors.white)),
         centerTitle: true,
         backgroundColor: const Color(0xFFFF6B35),
         foregroundColor: Colors.white,
@@ -132,46 +133,49 @@ class _GoogleRegisterScreenState extends State<GoogleRegisterScreen> {
             ),
             child: SafeArea(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.all(24.scale),
                 child: Card(
                    shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(20.scale),
                   ),
-                  elevation: 8,
+                  elevation: 8.scale,
                   color: Colors.white.withOpacity(0.95),
                   child: Padding(
-                    padding: const EdgeInsets.all(24),
+                    padding: EdgeInsets.all(24.scale),
                     child: Form(
                       key: _formKey,
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                           const Text(
+                           Text(
                             'กรุณากรอกข้อมูลเพิ่มเติม',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 22,
+                              fontSize: 22.sp,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFFFF6B35),
+                              color: const Color(0xFFFF6B35),
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          const Text(
+                          SizedBox(height: 8.h),
+                          Text(
                             'เพื่อเริ่มต้นใช้งานอย่างเต็มรูปแบบ',
-                            style: TextStyle(color: Colors.grey),
+                            style: TextStyle(color: Colors.grey, fontSize: 14.sp),
                           ),
-                          const SizedBox(height: 32),
+                          SizedBox(height: 32.h),
               
                           // Username
                           TextFormField(
                             controller: _usernameController,
                             enabled: !isLoading,
+                            style: TextStyle(fontSize: 16.sp),
                             decoration: InputDecoration(
                               labelText: 'ชื่อผู้ใช้ (Username)',
-                              prefixIcon: const Icon(Icons.person_outline),
+                              labelStyle: TextStyle(fontSize: 14.sp),
+                              prefixIcon: Icon(Icons.person_outline, size: 24.scale),
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(12.scale),
                               ),
+                              contentPadding: EdgeInsets.all(12.scale),
                             ),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
@@ -180,26 +184,31 @@ class _GoogleRegisterScreenState extends State<GoogleRegisterScreen> {
                               return null;
                             },
                           ),
-                          const SizedBox(height: 20),
+                          SizedBox(height: 20.h),
               
                           // Birth Date
                           TextFormField(
                             controller: _birthDateController,
                             readOnly: true,
+                            enabled: !isLoading,
+                            style: TextStyle(fontSize: 16.sp),
                             onTap: isLoading ? null : () => _selectDate(context),
                             decoration: InputDecoration(
                               labelText: 'วันเกิด',
+                              labelStyle: TextStyle(fontSize: 14.sp),
                               hintText: 'วว/ดด/ปปปป',
-                              prefixIcon: const Icon(Icons.calendar_today),
+                              hintStyle: TextStyle(fontSize: 16.sp),
+                              prefixIcon: Icon(Icons.calendar_today, size: 24.scale),
                               suffixIcon: _selectedDate != null 
                                 ? Padding(
-                                    padding: const EdgeInsets.all(12.0),
-                                    child: Text('อายุ $_calculatedAge ปี'),
+                                    padding: EdgeInsets.all(12.scale),
+                                    child: Text('อายุ $_calculatedAge ปี', style: TextStyle(fontSize: 12.sp)),
                                   ) 
                                 : null,
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(12.scale),
                               ),
+                              contentPadding: EdgeInsets.all(12.scale),
                             ),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
@@ -208,45 +217,47 @@ class _GoogleRegisterScreenState extends State<GoogleRegisterScreen> {
                               return null;
                             },
                           ),
-                          const SizedBox(height: 20),
+                          SizedBox(height: 20.h),
               
                           // Gender
                           DropdownButtonFormField<String>(
                             value: _selectedGender,
                             items: _genders.map((g) => DropdownMenuItem(
                               value: g, 
-                              child: Text(g)
+                              child: Text(g, style: TextStyle(fontSize: 16.sp))
                             )).toList(),
                             onChanged: isLoading ? null : (v) => setState(() => _selectedGender = v!),
                             decoration: InputDecoration(
                               labelText: 'เพศ',
-                              prefixIcon: const Icon(Icons.transgender),
+                              labelStyle: TextStyle(fontSize: 14.sp),
+                              prefixIcon: Icon(Icons.transgender, size: 24.scale),
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(12.scale),
                               ),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 12.w),
                             ),
                           ),
-                          const SizedBox(height: 32),
+                          SizedBox(height: 32.h),
               
                           // Submit Button
                           SizedBox(
                             width: double.infinity,
-                            height: 50,
+                            height: 50.h,
                             child: ElevatedButton(
                               onPressed: isLoading ? null : _onSubmit,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFFFF6B35),
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(12.scale),
                                 ),
                               ),
                               child: isLoading
-                                  ? const CircularProgressIndicator(color: Colors.white)
-                                  : const Text(
+                                  ? SizedBox(height: 24.scale, width: 24.scale, child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                  : Text(
                                       'ยืนยันข้อมูล',
                                       style: TextStyle(
-                                        fontSize: 16,
+                                        fontSize: 16.sp,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),

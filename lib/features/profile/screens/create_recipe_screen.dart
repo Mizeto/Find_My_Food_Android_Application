@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/responsive_helper.dart';
 import '../../../data/repositories/recipe_repository.dart';
 import '../../home/models/food_model.dart';
 import '../bloc/create_recipe_cubit.dart';
@@ -55,21 +56,21 @@ class _CreateRecipeViewState extends State<CreateRecipeView> {
   void _showImageSourceActionSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20.scale))),
       builder: (ctx) => SafeArea(
         child: Wrap(
           children: [
             ListTile(
-              leading: const Icon(Icons.photo_library, color: AppTheme.primaryGreen),
-              title: const Text('เลือกจากแกลเลอรี'),
+              leading: Icon(Icons.photo_library, color: AppTheme.primaryGreen, size: 24.scale),
+              title: Text('เลือกจากแกลเลอรี', style: TextStyle(fontSize: 16.sp)),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickImage(ImageSource.gallery);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.camera_alt, color: AppTheme.primaryOrange),
-              title: const Text('ถ่ายรูปใหม่'),
+              leading: Icon(Icons.camera_alt, color: AppTheme.brandPurple, size: 24.scale),
+              title: Text('ถ่ายรูปใหม่', style: TextStyle(fontSize: 16.sp)),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickImage(ImageSource.camera);
@@ -90,7 +91,7 @@ class _CreateRecipeViewState extends State<CreateRecipeView> {
     showDialog(
       context: parentContext,
       builder: (ctx) => AlertDialog(
-        title: const Text('เพิ่มวัตถุดิบ', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text('เพิ่มวัตถุดิบ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18.sp)),
         content: StatefulBuilder(
           builder: (context, setState) => SingleChildScrollView(
             child: Column(
@@ -98,19 +99,30 @@ class _CreateRecipeViewState extends State<CreateRecipeView> {
               children: [
                 TextField(
                   controller: nameCtrl,
-                  decoration: const InputDecoration(labelText: 'ชื่อวัตถุดิบ'),
+                  decoration: InputDecoration(
+                    labelText: 'ชื่อวัตถุดิบ',
+                    labelStyle: TextStyle(fontSize: 14.sp),
+                  ),
+                  style: TextStyle(fontSize: 16.sp),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12.h),
                 TextField(
                   controller: qtyCtrl,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(labelText: 'จำนวน'),
+                  decoration: InputDecoration(
+                    labelText: 'จำนวน',
+                    labelStyle: TextStyle(fontSize: 14.sp),
+                  ),
+                  style: TextStyle(fontSize: 16.sp),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12.h),
                 if (units.isNotEmpty)
                   DropdownButtonFormField<int>(
                     value: selectedUnitId,
-                    decoration: const InputDecoration(labelText: 'หน่วย'),
+                    decoration: InputDecoration(
+                      labelText: 'หน่วย',
+                      labelStyle: TextStyle(fontSize: 14.sp),
+                    ),
                     items: units.map((u) {
                       return DropdownMenuItem(value: u.unitId, child: Text(u.unitName));
                     }).toList(),
@@ -118,9 +130,9 @@ class _CreateRecipeViewState extends State<CreateRecipeView> {
                       if (val != null) setState(() => selectedUnitId = val);
                     },
                   ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12.h),
                 SwitchListTile(
-                  title: const Text('เป็นวัตถุดิบหลัก?'),
+                  title: Text('เป็นวัตถุดิบหลัก?', style: TextStyle(fontSize: 16.sp)),
                   value: isMain,
                   onChanged: (val) => setState(() => isMain = val),
                   activeColor: AppTheme.primaryGreen,
@@ -133,10 +145,14 @@ class _CreateRecipeViewState extends State<CreateRecipeView> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('ยกเลิก', style: TextStyle(color: Colors.grey)),
+            child: Text('ยกเลิก', style: TextStyle(color: Colors.grey, fontSize: 14.sp)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryGreen),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryGreen,
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.scale)),
+            ),
             onPressed: () {
               if (nameCtrl.text.isEmpty || qtyCtrl.text.isEmpty) return;
               final qty = double.tryParse(qtyCtrl.text) ?? 1.0;
@@ -152,7 +168,7 @@ class _CreateRecipeViewState extends State<CreateRecipeView> {
               });
               Navigator.pop(ctx);
             },
-            child: const Text('เพิ่ม', style: TextStyle(color: Colors.white)),
+            child: Text('เพิ่ม', style: TextStyle(color: Colors.white, fontSize: 14.sp)),
           ),
         ],
       ),
@@ -165,29 +181,35 @@ class _CreateRecipeViewState extends State<CreateRecipeView> {
     showDialog(
       context: parentContext,
       builder: (ctx) => AlertDialog(
-        title: const Text('เพิ่มขั้นตอน', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text('เพิ่มขั้นตอน', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18.sp)),
         content: TextField(
           controller: stepCtrl,
           maxLines: 4,
-          decoration: const InputDecoration(
+          style: TextStyle(fontSize: 16.sp),
+          decoration: InputDecoration(
             hintText: 'อธิบายขั้นตอนการทำ...',
-            border: OutlineInputBorder(),
+            hintStyle: TextStyle(fontSize: 14.sp),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.scale)),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('ยกเลิก', style: TextStyle(color: Colors.grey)),
+            child: Text('ยกเลิก', style: TextStyle(color: Colors.grey, fontSize: 14.sp)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryOrange),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.brandPurple,
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.scale)),
+            ),
             onPressed: () {
               if (stepCtrl.text.isNotEmpty) {
                 parentContext.read<CreateRecipeCubit>().addStep(stepCtrl.text);
               }
               Navigator.pop(ctx);
             },
-            child: const Text('เพิ่ม', style: TextStyle(color: Colors.white)),
+            child: Text('เพิ่ม', style: TextStyle(color: Colors.white, fontSize: 14.sp)),
           ),
         ],
       ),
@@ -209,7 +231,7 @@ class _CreateRecipeViewState extends State<CreateRecipeView> {
       builder: (context, state) {
         return Scaffold(
           appBar: AppBar(
-            title: const Text('สร้างสูตรอาหาร', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+            title: Text('สร้างสูตรอาหาร', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87, fontSize: 20.sp)),
             backgroundColor: Colors.white,
             elevation: 0,
             iconTheme: const IconThemeData(color: Colors.black87),
@@ -219,7 +241,7 @@ class _CreateRecipeViewState extends State<CreateRecipeView> {
               : Stack(
                   children: [
                     SingleChildScrollView(
-                      padding: const EdgeInsets.all(20),
+                      padding: EdgeInsets.all(20.scale),
                       child: Form(
                         key: _formKey,
                         onChanged: () {
@@ -237,10 +259,10 @@ class _CreateRecipeViewState extends State<CreateRecipeView> {
                               onTap: () => _showImageSourceActionSheet(context),
                               child: Container(
                                 width: double.infinity,
-                                height: 200,
+                                height: 200.h,
                                 decoration: BoxDecoration(
                                   color: Colors.grey[200],
-                                  borderRadius: BorderRadius.circular(20),
+                                  borderRadius: BorderRadius.circular(20.scale),
                                   image: state.imagePath != null
                                       ? DecorationImage(
                                           image: FileImage(File(state.imagePath!)),
@@ -253,39 +275,39 @@ class _CreateRecipeViewState extends State<CreateRecipeView> {
                                     ? Column(
                                         mainAxisAlignment: MainAxisAlignment.center,
                                         children: [
-                                          Icon(Icons.add_a_photo, size: 50, color: Colors.grey[400]),
-                                          const SizedBox(height: 10),
-                                          Text('เพิ่มรูปภาพอาหารของคุณ', style: TextStyle(color: Colors.grey[600])),
+                                          Icon(Icons.add_a_photo, size: 50.scale, color: Colors.grey[400]),
+                                          SizedBox(height: 10.h),
+                                          Text('เพิ่มรูปภาพอาหารของคุณ', style: TextStyle(color: Colors.grey[600], fontSize: 14.sp)),
                                         ],
                                       )
                                     : null,
                               ),
                             ),
-                            const SizedBox(height: 24),
+                            SizedBox(height: 24.h),
 
                             // Basic details
                             TextFormField(
                               controller: _titleController,
-                              decoration: const InputDecoration(
+                              decoration: InputDecoration(
                                 labelText: 'ชื่อเมนู',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.restaurant_menu),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.scale)),
+                                prefixIcon: Icon(Icons.restaurant_menu, size: 24.scale),
                               ),
                               validator: (v) => v!.isEmpty ? 'กรุณากรอกชื่อ' : null,
                             ),
-                            const SizedBox(height: 16),
+                            SizedBox(height: 16.h),
 
                             TextFormField(
                               controller: _descriptionController,
                               maxLines: 3,
-                              decoration: const InputDecoration(
+                              decoration: InputDecoration(
                                 labelText: 'คำอธิบาย / จุดเด่นของเมนู',
-                                border: OutlineInputBorder(),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.scale)),
                                 alignLabelWithHint: true,
                               ),
                               validator: (v) => v!.isEmpty ? 'กรุณากรอกคำอธิบาย' : null,
                             ),
-                            const SizedBox(height: 16),
+                            SizedBox(height: 16.h),
 
                             Row(
                               children: [
@@ -293,56 +315,56 @@ class _CreateRecipeViewState extends State<CreateRecipeView> {
                                   child: TextFormField(
                                     controller: _timeController,
                                     keyboardType: TextInputType.number,
-                                    decoration: const InputDecoration(
+                                    decoration: InputDecoration(
                                       labelText: 'เวลาทำ (นาที)',
-                                      border: OutlineInputBorder(),
-                                      prefixIcon: Icon(Icons.timer),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.scale)),
+                                      prefixIcon: Icon(Icons.timer, size: 24.scale),
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 16),
+                                SizedBox(width: 16.w),
                                 Expanded(
                                   child: SwitchListTile(
-                                    title: const Text('สาธารณะ', style: TextStyle(fontWeight: FontWeight.bold)),
+                                    title: Text('สาธารณะ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.sp)),
                                     value: state.isPublic,
                                     onChanged: (val) => context.read<CreateRecipeCubit>().updateBasicInfo(isPublic: val),
                                     activeColor: AppTheme.primaryGreen,
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 8.w),
                                   ),
                                 ),
                               ],
                             ),
-                            const Divider(height: 40, thickness: 1),
+                            Divider(height: 40.h, thickness: 1),
 
                             // Categories
-                            const Text('หมวดหมู่ (Categories)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 12),
+                            Text('หมวดหมู่ (Categories)', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
+                            SizedBox(height: 12.h),
                             Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
+                              spacing: 8.w,
+                              runSpacing: 8.h,
                               children: state.availableCategories.map((cat) {
                                 final isSelected = state.selectedCategories.any((c) => c.categoryId == cat.categoryId);
                                 return FilterChip(
-                                  label: Text(cat.categoryName),
+                                  label: Text(cat.categoryName, style: TextStyle(fontSize: 14.sp)),
                                   selected: isSelected,
-                                  selectedColor: AppTheme.primaryOrange.withOpacity(0.2),
-                                  checkmarkColor: AppTheme.primaryOrange,
+                                  selectedColor: AppTheme.brandPurple.withOpacity(0.2),
+                                  checkmarkColor: AppTheme.brandPurple,
                                   onSelected: (_) => context.read<CreateRecipeCubit>().toggleCategory(cat),
                                 );
                               }).toList(),
                             ),
-                            const Divider(height: 40, thickness: 1),
+                            Divider(height: 40.h, thickness: 1),
 
                             // Tags
-                            const Text('แท็ก (Tags)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 12),
+                            Text('แท็ก (Tags)', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
+                            SizedBox(height: 12.h),
                             Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
+                              spacing: 8.w,
+                              runSpacing: 8.h,
                               children: state.availableTags.map((tag) {
                                 final isSelected = state.selectedTags.any((t) => t.tagId == tag.tagId);
                                 return FilterChip(
-                                  label: Text('#${tag.tagName}'),
+                                  label: Text('#${tag.tagName}', style: TextStyle(fontSize: 14.sp)),
                                   selected: isSelected,
                                   selectedColor: Colors.blueAccent.withOpacity(0.2),
                                   checkmarkColor: Colors.blueAccent,
@@ -350,15 +372,14 @@ class _CreateRecipeViewState extends State<CreateRecipeView> {
                                 );
                               }).toList(),
                             ),
-                            const Divider(height: 40, thickness: 1),
+                            Divider(height: 40.h, thickness: 1),
 
-                            // Ingredients
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text('วัตถุดิบ (Ingredients)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                Text('วัตถุดิบ (Ingredients)', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
                                 IconButton(
-                                  icon: const Icon(Icons.add_circle, color: AppTheme.primaryGreen, size: 28),
+                                  icon: Icon(Icons.add_circle, color: AppTheme.primaryGreen, size: 28.scale),
                                   onPressed: () => _addIngredientDialog(context, state.availableUnits),
                                 ),
                               ],
@@ -371,11 +392,11 @@ class _CreateRecipeViewState extends State<CreateRecipeView> {
                                 final ing = state.ingredients[i];
                                 return ListTile(
                                   contentPadding: EdgeInsets.zero,
-                                  leading: const Icon(Icons.kitchen, color: Colors.teal),
-                                  title: Text('${ing['name']} ${ing['isMainIngredient'] == true ? "(หลัก)" : ""}'),
-                                  subtitle: Text('${ing['quantity']} ${ing['unitName']}'),
+                                  leading: Icon(Icons.kitchen, color: Colors.teal, size: 24.scale),
+                                  title: Text('${ing['name']} ${ing['isMainIngredient'] == true ? "(หลัก)" : ""}', style: TextStyle(fontSize: 16.sp)),
+                                  subtitle: Text('${ing['quantity']} ${ing['unitName']}', style: TextStyle(fontSize: 14.sp)),
                                   trailing: IconButton(
-                                    icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
+                                    icon: Icon(Icons.remove_circle_outline, color: Colors.red, size: 24.scale),
                                     onPressed: () => context.read<CreateRecipeCubit>().removeIngredient(i),
                                   ),
                                 );
@@ -383,18 +404,17 @@ class _CreateRecipeViewState extends State<CreateRecipeView> {
                             ),
                             if (state.ingredients.isEmpty)
                               Padding(
-                                padding: const EdgeInsets.only(bottom: 20),
-                                child: Text('ยังไม่มีวัตถุดิบ', style: TextStyle(color: Colors.grey[500], fontStyle: FontStyle.italic)),
+                                padding: EdgeInsets.only(bottom: 20.h),
+                                child: Text('ยังไม่มีวัตถุดิบ', style: TextStyle(color: Colors.grey[500], fontStyle: FontStyle.italic, fontSize: 14.sp)),
                               ),
-                            const Divider(height: 20, thickness: 1),
+                            Divider(height: 20.h, thickness: 1),
 
-                            // Steps
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text('วิธีทำ (Steps)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                Text('วิธีทำ (Steps)', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
                                 IconButton(
-                                  icon: const Icon(Icons.add_circle, color: AppTheme.primaryOrange, size: 28),
+                                  icon: Icon(Icons.add_circle, color: AppTheme.brandPurple, size: 28.scale),
                                   onPressed: () => _addStepDialog(context),
                                 ),
                               ],
@@ -407,12 +427,13 @@ class _CreateRecipeViewState extends State<CreateRecipeView> {
                                 return ListTile(
                                   contentPadding: EdgeInsets.zero,
                                   leading: CircleAvatar(
-                                    backgroundColor: AppTheme.primaryOrange.withOpacity(0.2),
-                                    child: Text('${i + 1}', style: const TextStyle(color: AppTheme.primaryOrange, fontWeight: FontWeight.bold)),
+                                    radius: 20.scale,
+                                    backgroundColor: AppTheme.brandPurple.withOpacity(0.2),
+                                    child: Text('${i + 1}', style: TextStyle(color: AppTheme.brandPurple, fontWeight: FontWeight.bold, fontSize: 14.sp)),
                                   ),
-                                  title: Text(state.steps[i]),
+                                  title: Text(state.steps[i], style: TextStyle(fontSize: 16.sp)),
                                   trailing: IconButton(
-                                    icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
+                                    icon: Icon(Icons.remove_circle_outline, color: Colors.red, size: 24.scale),
                                     onPressed: () => context.read<CreateRecipeCubit>().removeStep(i),
                                   ),
                                 );
@@ -420,11 +441,11 @@ class _CreateRecipeViewState extends State<CreateRecipeView> {
                             ),
                             if (state.steps.isEmpty)
                               Padding(
-                                padding: const EdgeInsets.only(bottom: 20),
-                                child: Text('ยังไม่มีขั้นตอนวิธีทำ', style: TextStyle(color: Colors.grey[500], fontStyle: FontStyle.italic)),
+                                padding: EdgeInsets.only(bottom: 20.h),
+                                child: Text('ยังไม่มีขั้นตอนวิธีทำ', style: TextStyle(color: Colors.grey[500], fontStyle: FontStyle.italic, fontSize: 14.sp)),
                               ),
 
-                            const SizedBox(height: 100),
+                            SizedBox(height: 100.h),
                           ],
                         ),
                       ),
@@ -432,14 +453,14 @@ class _CreateRecipeViewState extends State<CreateRecipeView> {
 
                     // Floating Submit Button
                     Positioned(
-                      bottom: 20,
-                      left: 20,
-                      right: 20,
+                      bottom: 20.h,
+                      left: 20.w,
+                      right: 20.w,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.primaryGreen,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                          padding: EdgeInsets.symmetric(vertical: 16.h),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30.scale)),
                           elevation: 8,
                         ),
                         onPressed: state.isLoading
@@ -450,12 +471,12 @@ class _CreateRecipeViewState extends State<CreateRecipeView> {
                                 }
                               },
                         child: state.isLoading
-                            ? const SizedBox(
-                                height: 24,
-                                width: 24,
-                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                            ? SizedBox(
+                                height: 24.scale,
+                                width: 24.scale,
+                                child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
                               )
-                            : const Text('บันทึกสูตรอาหาร', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                            : Text('บันทึกสูตรอาหาร', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold, color: Colors.white)),
                       ),
                     ),
                   ],

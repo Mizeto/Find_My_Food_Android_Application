@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_cubit.dart';
+import '../../../core/utils/responsive_helper.dart';
 import '../../auth/cubit/auth_cubit.dart';
 import '../../auth/services/auth_service.dart';
 import 'edit_profile_screen.dart';
 import './user_stock_screen.dart';
 import './my_recipes_screen.dart';
 import './liked_recipes_screen.dart';
+import '../../notification/bloc/notification_bloc.dart';
+import '../../notification/screens/notification_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -36,50 +39,48 @@ class ProfileScreen extends StatelessWidget {
               if (user.isGuest)
                 SliverToBoxAdapter(
                   child: Container(
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
+                    margin: EdgeInsets.symmetric(
+                      horizontal: 16.w,
+                      vertical: 8.h,
                     ),
-                    padding: const EdgeInsets.all(20),
+                    padding: EdgeInsets.all(20.scale),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFFF6B35), Color(0xFFFF8E53)],
-                      ),
-                      borderRadius: BorderRadius.circular(16),
+                      gradient: AppTheme.brandGradient,
+                      borderRadius: BorderRadius.circular(16.scale),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFFFF6B35).withOpacity(0.3),
-                          blurRadius: 15,
-                          offset: const Offset(0, 5),
+                          color: AppTheme.brandPurple.withOpacity(0.3),
+                          blurRadius: 15.scale,
+                          offset: Offset(0, 5.h),
                         ),
                       ],
                     ),
                     child: Column(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.person_add,
                           color: Colors.white,
-                          size: 40,
+                          size: 40.scale,
                         ),
-                        const SizedBox(height: 12),
-                        const Text(
+                        SizedBox(height: 12.h),
+                        Text(
                           'คุณกำลังใช้งานแบบผู้เยี่ยมชม',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 16,
+                            fontSize: 16.sp,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        SizedBox(height: 4.h),
                         Text(
                           'เข้าสู่ระบบหรือสมัครสมาชิกเพื่อใช้งานฟีเจอร์ทั้งหมด',
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.9),
-                            fontSize: 13,
+                            fontSize: 13.sp,
                           ),
                           textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16.h),
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
@@ -87,16 +88,16 @@ class ProfileScreen extends StatelessWidget {
                               context.read<AuthCubit>().signOut();
                             },
                             icon: const Icon(Icons.login),
-                            label: const Text(
+                            label: Text(
                               'ผูกบัญชี / เข้าสู่ระบบ',
-                              style: TextStyle(fontSize: 16),
+                              style: TextStyle(fontSize: 16.sp),
                             ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.white,
-                              foregroundColor: const Color(0xFFFF6B35),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              foregroundColor: AppTheme.brandPurple,
+                              padding: EdgeInsets.symmetric(vertical: 12.h),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(12.scale),
                               ),
                             ),
                           ),
@@ -116,7 +117,7 @@ class ProfileScreen extends StatelessWidget {
               // Logout Button
               SliverToBoxAdapter(child: _LogoutButton()),
 
-              const SliverToBoxAdapter(child: SizedBox(height: 40)),
+              SliverToBoxAdapter(child: SizedBox(height: 40.h)),
             ],
           );
         },
@@ -135,7 +136,7 @@ class _ProfileHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 60, 20, 12),
+      padding: EdgeInsets.fromLTRB(20.w, 60.h, 20.w, 12.h),
       child: Column(
         children: [
           // Avatar and Notification Row
@@ -144,16 +145,16 @@ class _ProfileHeader extends StatelessWidget {
             children: [
               // Avatar
               Container(
-                width: 70,
-                height: 70,
+                width: 70.scale,
+                height: 70.scale,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: AppTheme.primaryGradient,
+                  gradient: AppTheme.brandGradient,
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.primaryOrange.withOpacity(0.3),
-                      blurRadius: 15,
-                      offset: const Offset(0, 5),
+                      color: AppTheme.brandPurple.withOpacity(0.3),
+                      blurRadius: 15.scale,
+                      offset: Offset(0, 5.h),
                     ),
                   ],
                 ),
@@ -172,18 +173,44 @@ class _ProfileHeader extends StatelessWidget {
               const Spacer(),
 
               // Notification Icon
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: isDarkMode
-                      ? Colors.white.withOpacity(0.1)
-                      : Colors.grey.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.notifications_outlined,
-                  color: isDarkMode ? Colors.white : Colors.black87,
-                ),
+              BlocBuilder<NotificationBloc, NotificationState>(
+                builder: (context, state) {
+                  int unreadCount = 0;
+                  if (state is NotificationLoaded) {
+                    unreadCount = state.unreadCount;
+                  }
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const NotificationScreen(),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: EdgeInsets.all(8.scale),
+                      decoration: BoxDecoration(
+                        color: isDarkMode
+                            ? Colors.white.withOpacity(0.1)
+                            : Colors.grey.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Badge(
+                        label: unreadCount > 0
+                            ? Text(unreadCount.toString())
+                            : null,
+                        isLabelVisible: unreadCount > 0,
+                        backgroundColor: Colors.red,
+                        child: Icon(
+                          Icons.notifications_outlined,
+                          color: isDarkMode ? Colors.white : Colors.black87,
+                          size: 24.scale,
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -199,16 +226,16 @@ class _ProfileHeader extends StatelessWidget {
                 Text(
                   user.username,
                   style: TextStyle(
-                    fontSize: 22,
+                    fontSize: 22.sp,
                     fontWeight: FontWeight.bold,
                     color: isDarkMode ? Colors.white : Colors.black87,
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4.h),
                 Text(
                   user.email,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 14.sp,
                     color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                   ),
                 ),
@@ -227,8 +254,8 @@ class _ProfileHeader extends StatelessWidget {
         user.username.isNotEmpty == true
             ? user.username.substring(0, 1).toUpperCase()
             : '👤',
-        style: const TextStyle(
-          fontSize: 28,
+        style: TextStyle(
+          fontSize: 28.sp,
           color: Colors.white,
           fontWeight: FontWeight.bold,
         ),
@@ -344,37 +371,37 @@ class _ProfileMenu extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  const Row(
+                  SizedBox(height: 20.h),
+                  Row(
                     children: [
                       Icon(
                         Icons.feedback_outlined,
-                        color: Color(0xFFFF6B35),
-                        size: 28,
+                        color: const Color(0xFFFF6B35),
+                        size: 28.scale,
                       ),
-                      SizedBox(width: 12),
+                      SizedBox(width: 12.w),
                       Text(
                         'ส่งข้อเสนอแนะ',
                         style: TextStyle(
-                          fontSize: 20,
+                          fontSize: 20.sp,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20.h),
                   TextField(
                     controller: titleCtrl,
                     enabled: !isSending,
                     decoration: InputDecoration(
                       labelText: 'หัวข้อ',
-                      prefixIcon: const Icon(Icons.title),
+                      prefixIcon: Icon(Icons.title, size: 24.scale),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(12.scale),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16.h),
                   TextField(
                     controller: detailCtrl,
                     enabled: !isSending,
@@ -382,16 +409,16 @@ class _ProfileMenu extends StatelessWidget {
                     decoration: InputDecoration(
                       labelText: 'รายละเอียด',
                       alignLabelWithHint: true,
-                      prefixIcon: const Padding(
-                        padding: EdgeInsets.only(bottom: 52),
-                        child: Icon(Icons.description_outlined),
+                      prefixIcon: Padding(
+                        padding: EdgeInsets.only(bottom: 52.h),
+                        child: Icon(Icons.description_outlined, size: 24.scale),
                       ),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(12.scale),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: 24.h),
                   SizedBox(
                     width: double.infinity,
                     height: 50,
@@ -429,12 +456,14 @@ class _ProfileMenu extends StatelessWidget {
                                                 ? Icons.check_circle
                                                 : Icons.error_outline,
                                             color: Colors.white,
+                                            size: 24.scale,
                                           ),
-                                          const SizedBox(width: 12),
+                                          SizedBox(width: 12.w),
                                           Text(
                                             ok
                                                 ? 'ส่งข้อเสนอแนะเรียบร้อยแล้ว ขอบคุณ!'
                                                 : 'ส่งข้อเสนอแนะไม่สำเร็จ',
+                                            style: TextStyle(fontSize: 14.sp),
                                           ),
                                         ],
                                       ),
@@ -460,21 +489,21 @@ class _ProfileMenu extends StatelessWidget {
                         backgroundColor: const Color(0xFFFF6B35),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(12.scale),
                         ),
                       ),
                       child: isSending
-                          ? const SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: CircularProgressIndicator(
+                          ? SizedBox(
+                              height: 24.scale,
+                              width: 24.scale,
+                              child: const CircularProgressIndicator(
                                 color: Colors.white,
                                 strokeWidth: 2,
                               ),
                             )
-                          : const Text(
+                          : Text(
                               'ส่งข้อเสนอแนะ',
-                              style: TextStyle(fontSize: 16),
+                              style: TextStyle(fontSize: 16.sp),
                             ),
                     ),
                   ),
@@ -513,25 +542,34 @@ class _MenuItemTile extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
         child: Row(
           children: [
-            Icon(
-              icon,
-              size: 24,
-              color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+            Container(
+              padding: EdgeInsets.all(8.scale),
+              decoration: BoxDecoration(
+                color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.grey[100],
+                borderRadius: BorderRadius.circular(10.scale),
+              ),
+              child: Icon(
+                icon,
+                size: 20.scale,
+                color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+              ),
             ),
-            const SizedBox(width: 16),
+            SizedBox(width: 16.w),
             Text(
               title,
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w500,
                 color: isDarkMode ? Colors.white : Colors.black87,
               ),
             ),
             const Spacer(),
             Icon(
               Icons.chevron_right,
+              size: 24.scale,
               color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
             ),
           ],
@@ -550,25 +588,26 @@ class _ThemeToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      padding: const EdgeInsets.all(16),
+      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
+      padding: EdgeInsets.all(16.scale),
       decoration: BoxDecoration(
         color: isDarkMode
             ? Colors.white.withOpacity(0.05)
             : Colors.grey.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(16.scale),
       ),
       child: Row(
         children: [
           Icon(
             isDarkMode ? Icons.dark_mode : Icons.light_mode,
+            size: 24.scale,
             color: isDarkMode ? Colors.yellow[600] : Colors.orange,
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12.w),
           Text(
             isDarkMode ? 'โหมดมืด' : 'โหมดสว่าง',
             style: TextStyle(
-              fontSize: 16,
+              fontSize: 16.sp,
               color: isDarkMode ? Colors.white : Colors.black87,
             ),
           ),
@@ -578,7 +617,7 @@ class _ThemeToggle extends StatelessWidget {
             onChanged: (_) {
               context.read<ThemeCubit>().toggleTheme();
             },
-            activeColor: AppTheme.primaryOrange,
+            activeColor: AppTheme.brandPurple,
           ),
         ],
       ),
@@ -598,7 +637,7 @@ class _LogoutButton extends StatelessWidget {
         : 'คุณต้องการออกจากระบบหรือไม่?';
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+      margin: EdgeInsets.fromLTRB(16.w, 4.h, 16.w, 16.h),
       child: OutlinedButton.icon(
         onPressed: () {
           showDialog(
@@ -628,16 +667,20 @@ class _LogoutButton extends StatelessWidget {
         icon: Icon(
           isGuest ? Icons.login : Icons.logout,
           color: isGuest ? Colors.blue : Colors.red,
+          size: 20.scale,
         ),
         label: Text(
           labelText,
-          style: TextStyle(color: isGuest ? Colors.blue : Colors.red),
+          style: TextStyle(
+            color: isGuest ? Colors.blue : Colors.red,
+            fontSize: 16.sp,
+          ),
         ),
         style: OutlinedButton.styleFrom(
           side: BorderSide(color: isGuest ? Colors.blue : Colors.red),
-          padding: const EdgeInsets.symmetric(vertical: 14),
+          padding: EdgeInsets.symmetric(vertical: 14.h),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(12.scale),
           ),
         ),
       ),

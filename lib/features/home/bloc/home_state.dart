@@ -15,6 +15,8 @@ class HomeLoaded extends HomeState {
   final List<Recipe> recommendedFromStock;
   final List<Map<String, dynamic>> categories;
   final int? selectedCategoryId;
+  final List<int> selectedFilterCategoryIds;
+  final List<int> selectedFilterTagIds;
 
   HomeLoaded({
     required this.recipes,
@@ -22,6 +24,8 @@ class HomeLoaded extends HomeState {
     this.recommendedFromStock = const [],
     this.categories = const [],
     this.selectedCategoryId,
+    this.selectedFilterCategoryIds = const [],
+    this.selectedFilterTagIds = const [],
   });
 
   @override
@@ -31,6 +35,8 @@ class HomeLoaded extends HomeState {
     recommendedFromStock, 
     categories, 
     selectedCategoryId ?? -1,
+    selectedFilterCategoryIds,
+    selectedFilterTagIds,
   ];
 
   HomeLoaded copyWith({
@@ -39,6 +45,8 @@ class HomeLoaded extends HomeState {
     List<Recipe>? recommendedFromStock,
     List<Map<String, dynamic>>? categories,
     int? Function()? selectedCategoryId,
+    List<int>? selectedFilterCategoryIds,
+    List<int>? selectedFilterTagIds,
   }) {
     return HomeLoaded(
       recipes: recipes ?? this.recipes,
@@ -48,6 +56,8 @@ class HomeLoaded extends HomeState {
       selectedCategoryId: selectedCategoryId != null 
           ? selectedCategoryId() 
           : this.selectedCategoryId,
+      selectedFilterCategoryIds: selectedFilterCategoryIds ?? this.selectedFilterCategoryIds,
+      selectedFilterTagIds: selectedFilterTagIds ?? this.selectedFilterTagIds,
     );
   }
 }

@@ -6,15 +6,32 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_cubit.dart';
 import '../../auth/cubit/auth_cubit.dart';
 import 'recipe_detail_screen.dart';
+import 'see_all_screen.dart';
 import 'add_food_screen.dart';
+import '../../profile/screens/user_stock_screen.dart';
 import '../widgets/recipe_card.dart';
 import '../../notification/bloc/notification_bloc.dart';
 import '../../notification/screens/notification_screen.dart';
 import '../models/food_model.dart';
 import '../services/food_service.dart';
+import '../../../core/utils/responsive_helper.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  bool _isExpanded = false;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,129 +44,245 @@ class HomeScreen extends StatelessWidget {
         onRefresh: () async {
           final isGuest = context.read<AuthCubit>().isGuest;
           context.read<HomeBloc>().add(LoadHomeRecipes(isGuest: isGuest));
+          _searchController.clear();
         },
         child: CustomScrollView(
         slivers: [
-          // Gradient AppBar ที่สวยงาม
-          SliverAppBar(
-            expandedHeight: 140,
-            floating: true,
-            pinned: true,
-            flexibleSpace: Container(
-              decoration: const BoxDecoration(
-                gradient: AppTheme.primaryGradient,
-              ),
-              child: FlexibleSpaceBar(
-                centerTitle: true,
-                title: const Text(
-                  'Find My Food 🍳',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 22,
-                    shadows: [
-                      Shadow(
-                        offset: Offset(0, 1),
-                        blurRadius: 3,
-                        color: Colors.black26,
-                      ),
-                    ],
-                  ),
-                ),
-                background: Container(
-                  decoration: const BoxDecoration(
-                    gradient: AppTheme.primaryGradient,
-                  ),
-                  child: Align(
-                    alignment: Alignment.bottomRight,
-                    child: Opacity(
-                      opacity: 0.3,
-                      child: Icon(
-                        Icons.restaurant,
-                        size: 100,
-                        color: Colors.white.withValues(alpha: 0.3),
+          // Clean White AppBar with Greeting
+          SliverToBoxAdapter(
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 0),
+                child: Row(
+                  children: [
+                    // Greeting Text
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'สวัสดี! 👋',
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              color: Colors.grey[500],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          SizedBox(height: 4.h),
+                          BlocBuilder<AuthCubit, AuthState>(
+                            builder: (context, state) {
+                              String name = 'ผู้เยี่ยมชม';
+                              if (state is AuthAuthenticated) {
+                                name = state.user.username;
+                              }
+                              return Text(
+                                name,
+                                style: TextStyle(
+                                  fontSize: 22.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              );
+                            },
+                          ),
+                        ],
                       ),
                     ),
+                    // Notification Icon
+                    BlocBuilder<NotificationBloc, NotificationState>(
+                      builder: (context, state) {
+                        int unreadCount = 0;
+                        if (state is NotificationLoaded) {
+                          unreadCount = state.unreadCount;
+                        }
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const NotificationScreen(),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: isDarkMode ? const Color(0xFF1E2D4A) : Colors.grey[100],
+                              shape: BoxShape.circle,
+                            ),
+                            child: Badge(
+                              label: unreadCount > 0 ? Text(unreadCount.toString()) : null,
+                              isLabelVisible: unreadCount > 0,
+                              backgroundColor: Colors.red,
+                              child: Icon(
+                                Icons.notifications_outlined,
+                                color: isDarkMode ? Colors.white : Colors.grey[700],
+                                size: 24.scale,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    // Profile Avatar
+                    BlocBuilder<AuthCubit, AuthState>(
+                      builder: (context, state) {
+                        String? imageUrl;
+                        String initial = '👤';
+                        if (state is AuthAuthenticated) {
+                          imageUrl = state.user.profileImage;
+                          if (state.user.username.isNotEmpty) {
+                            initial = state.user.username.substring(0, 1).toUpperCase();
+                          }
+                        }
+                        return Container(
+                          width: 44.scale,
+                          height: 44.scale,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: AppTheme.primaryGradient,
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.brandPurple.withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: imageUrl != null && imageUrl.isNotEmpty
+                              ? ClipOval(
+                                  child: Image.network(
+                                    imageUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Center(
+                                      child: Text(initial, style: TextStyle(color: Colors.white, fontSize: 18.sp, fontWeight: FontWeight.bold)),
+                                    ),
+                                  ),
+                                )
+                              : Center(
+                                  child: Text(initial, style: TextStyle(color: Colors.white, fontSize: 18.sp, fontWeight: FontWeight.bold)),
+                                ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Search Bar — Clean Style
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(20.w, 20.h, 20.w, 0),
+              child: TextField(
+                controller: _searchController,
+                textInputAction: TextInputAction.search,
+                onSubmitted: (value) {
+                  context.read<HomeBloc>().add(SearchRecipes(value));
+                },
+                decoration: InputDecoration(
+                  hintText: 'ค้นหาสูตรอาหาร...',
+                  hintStyle: TextStyle(color: AppTheme.brandPurple, fontSize: 15.sp),
+                  prefixIcon: Icon(Icons.search, color: Colors.grey[400], size: 24.scale),
+                  suffixIcon: GestureDetector(
+                    onTap: () => _showFilterSheet(context),
+                    child: Container(
+                      margin: EdgeInsets.all(8.scale),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2BBBAD),
+                        borderRadius: BorderRadius.circular(10.scale),
+                      ),
+                      child: Icon(Icons.tune, color: Colors.white, size: 20.scale),
+                    ),
+                  ),
+                  filled: true,
+                  fillColor: isDarkMode ? const Color(0xFF16213E) : Colors.grey[100],
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none,
                   ),
                 ),
               ),
             ),
-            actions: [
-              // Theme toggle button
-              BlocBuilder<NotificationBloc, NotificationState>(
-                builder: (context, state) {
-                  int unreadCount = 0;
-                  if (state is NotificationLoaded) {
-                    unreadCount = state.unreadCount;
-                  }
-
-                  return IconButton(
-                    icon: Badge(
-                      label: unreadCount > 0 ? Text(unreadCount.toString()) : null,
-                      isLabelVisible: unreadCount > 0,
-                      backgroundColor: Colors.red,
-                      child: const Icon(
-                        Icons.notifications_outlined,
-                        color: Colors.white,
-                      ),
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const NotificationScreen(),
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-              const SizedBox(width: 8),
-            ],
           ),
 
-          // Search Bar
+          // Active Filter Indicator
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(30),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.primaryOrange.withValues(alpha: 0.2),
-                      blurRadius: 15,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: TextField(
-                  textInputAction: TextInputAction.search,
-                  onSubmitted: (value) {
-                    context.read<HomeBloc>().add(SearchRecipes(value));
-                  },
-                  decoration: InputDecoration(
-                    hintText: 'วันนี้มีอะไรในตู้เย็น? (เช่น ไข่, หมู)',
-                    prefixIcon: const Icon(Icons.search, color: AppTheme.primaryOrange),
-                    suffixIcon: GestureDetector(
-                      onTap: () => _showFilterSheet(context),
-                      child: Container(
-                        margin: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                          gradient: AppTheme.primaryGradient,
-                          shape: BoxShape.circle,
+            child: BlocBuilder<HomeBloc, HomeState>(
+              builder: (context, state) {
+                if (state is! HomeLoaded) return const SizedBox.shrink();
+                final catIds = state.selectedFilterCategoryIds;
+                final tagIds = state.selectedFilterTagIds;
+                if (catIds.isEmpty && tagIds.isEmpty) return const SizedBox.shrink();
+                
+                final totalFilters = catIds.length + tagIds.length;
+                final isGuest = context.read<AuthCubit>().isGuest;
+                
+                return Padding(
+                  padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 0),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                        decoration: BoxDecoration(
+                          color: AppTheme.brandPurple.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20.scale),
+                          border: Border.all(color: AppTheme.brandPurple.withOpacity(0.3)),
                         ),
-                        child: const Icon(Icons.tune, color: Colors.white, size: 20),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.filter_alt, size: 16.scale, color: AppTheme.brandPurple),
+                            SizedBox(width: 4.w),
+                            Text(
+                              'ตัวกรอง ($totalFilters)',
+                              style: TextStyle(
+                                fontSize: 13.sp,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.brandPurple,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    filled: true,
-                    fillColor: isDarkMode ? const Color(0xFF16213E) : Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      borderSide: BorderSide.none,
-                    ),
+                      SizedBox(width: 8.w),
+                      GestureDetector(
+                        onTap: () {
+                          _searchController.clear();
+                          context.read<HomeBloc>().add(LoadHomeRecipes(isGuest: isGuest));
+                        },
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(20.scale),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.close, size: 14.scale, color: Colors.grey[600]),
+                              SizedBox(width: 4.w),
+                              Text(
+                                'ล้างตัวกรอง',
+                                style: TextStyle(
+                                  fontSize: 13.sp,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppTheme.brandPurple,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ),
+                );
+              },
             ),
           ),
 
@@ -201,16 +334,44 @@ class HomeScreen extends StatelessWidget {
                         ),
 
                       // 4. Main List Title
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                        child: Text(
-                          state.recipes.isEmpty ? '' : 'ค้นหาเมนูอร่อย 🍳',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
+                      if (state.recipes.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'สูตรอาหารยอดนิยม 🔥',
+                                style: TextStyle(
+                                  fontSize: 18.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDarkMode ? Colors.white : Colors.black87,
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => SeeAllScreen(
+                                        title: 'เมนูที่แนะนำสำหรับคุณ ✨',
+                                        recipes: state.recipes,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Text(
+                                  'See all',
+                                  style: TextStyle(
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppTheme.brandPurple,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
 
                       if (state.recipes.isEmpty)
                         _buildEmptyWidget()
@@ -242,23 +403,129 @@ class HomeScreen extends StatelessWidget {
           
           if (authState is! AuthAuthenticated || isGuest) return const SizedBox.shrink();
 
-          return FloatingActionButton(
-            onPressed: () async {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const AddFoodScreen()),
-              );
-              if (result == true) {
-                if (context.mounted) {
-                   // Refresh list
-                   context.read<HomeBloc>().add(LoadHomeRecipes());
-                }
-              }
-            },
-            backgroundColor: AppTheme.primaryOrange,
-            child: const Icon(Icons.add, color: Colors.white),
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (_isExpanded) ...[
+                _buildFabAction(
+                  icon: Icons.kitchen_outlined,
+                  label: 'จัดการวัตถุดิบ (ตู้เย็น)',
+                  iconColor: AppTheme.brandBlue,
+                  onTap: () {
+                    setState(() => _isExpanded = false);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const UserStockScreen()),
+                    );
+                  },
+                  isDarkMode: isDarkMode,
+                ),
+                const SizedBox(height: 12),
+                _buildFabAction(
+                  icon: Icons.restaurant_menu_outlined,
+                  label: 'เพิ่มสูตรอาหาร',
+                  iconColor: AppTheme.brandPurple,
+                  onTap: () async {
+                    setState(() => _isExpanded = false);
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AddFoodScreen()),
+                    );
+                    if (result == true) {
+                      if (context.mounted) {
+                         context.read<HomeBloc>().add(LoadHomeRecipes());
+                      }
+                    }
+                  },
+                  isDarkMode: isDarkMode,
+                ),
+                const SizedBox(height: 12),
+              ],
+              GestureDetector(
+                onTap: () => setState(() => _isExpanded = !_isExpanded),
+                child: Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.brandGradient,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.brandPurple.withOpacity(0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: AnimatedRotation(
+                      turns: _isExpanded ? 0.125 : 0, // 45 degrees
+                      duration: const Duration(milliseconds: 200),
+                      child: const Icon(Icons.add, color: Colors.white, size: 28),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           );
         }
+      ),
+    );
+  }
+
+  Widget _buildFabAction({
+    required IconData icon,
+    required String label,
+    required Color iconColor,
+    required VoidCallback onTap,
+    required bool isDarkMode,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: isDarkMode ? const Color(0xFF1E2D4A) : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: isDarkMode ? Colors.white : Colors.black87,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: iconColor,
+              boxShadow: [
+                BoxShadow(
+                  color: iconColor.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Icon(icon, color: Colors.white, size: 20),
+          ),
+        ],
       ),
     );
   }
@@ -269,74 +536,109 @@ class HomeScreen extends StatelessWidget {
     required int? selectedId,
     required bool isDarkMode,
   }) {
+    // Emoji map for common Thai categories
+    const emojiMap = {
+      'อาหารคาว': '🍛',
+      'ของหวาน': '🍰',
+      'อาหารว่าง': '🍿',
+      'อาหารจานเดียว': '🍲',
+      'กับข้าว': '🥘',
+      'อาหารอีสาน': '🌶️',
+      'อาหารเหนือ': '🍜',
+      'อาหารใต้': '🦐',
+      'อาหารญี่ปุ่น': '🍱',
+      'อาหารจีน': '🥟',
+      'อาหารฝรั่ง': '🍕',
+      'เครื่องดื่ม': '🧃',
+    };
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(0, 16, 0, 0),
-      child: SizedBox(
-        height: 42,
-        child: ListView.builder(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          itemCount: categories.length + 1, // +1 for "ทั้งหมด"
-          itemBuilder: (context, index) {
-            final isAll = index == 0;
-            final isSelected = isAll
-                ? selectedId == null
-                : categories[index - 1]['category_id'] == selectedId;
-            final label = isAll
-                ? 'ทั้งหมด'
-                : categories[index - 1]['category_name'] ?? '';
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              'หมวดหมู่',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isDarkMode ? Colors.white : Colors.black87,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 46,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: categories.length + 1,
+              itemBuilder: (context, index) {
+                final isAll = index == 0;
+                final isSelected = isAll
+                    ? selectedId == null
+                    : categories[index - 1]['category_id'] == selectedId;
+                final label = isAll
+                    ? 'ทั้งหมด'
+                    : categories[index - 1]['category_name'] ?? '';
+                final emoji = isAll ? '🍽️' : (emojiMap[label] ?? '🍴');
 
-            return Padding(
-              padding: EdgeInsets.only(right: index < categories.length ? 8 : 0),
-              child: GestureDetector(
-                onTap: () {
-                  context.read<HomeBloc>().add(
-                    SelectCategory(isAll ? null : categories[index - 1]['category_id']),
-                  );
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  decoration: BoxDecoration(
-                    gradient: isSelected ? AppTheme.primaryGradient : null,
-                    color: isSelected
-                        ? null
-                        : (isDarkMode ? const Color(0xFF1E2D4A) : Colors.grey[100]),
-                    borderRadius: BorderRadius.circular(20),
-                    border: isSelected
-                        ? null
-                        : Border.all(
-                            color: isDarkMode
-                                ? Colors.grey[700]!
-                                : Colors.grey[300]!,
-                          ),
-                    boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: AppTheme.primaryOrange.withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ]
-                        : null,
-                  ),
-                  child: Center(
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                return Padding(
+                  padding: EdgeInsets.only(right: index < categories.length ? 10 : 0),
+                  child: GestureDetector(
+                    onTap: () {
+                      context.read<HomeBloc>().add(
+                        SelectCategory(isAll ? null : categories[index - 1]['category_id']),
+                      );
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
                         color: isSelected
-                            ? Colors.white
-                            : (isDarkMode ? Colors.grey[300] : Colors.grey[700]),
+                            ? (isDarkMode ? const Color(0xFF2A3D5A) : Colors.black87)
+                            : (isDarkMode ? const Color(0xFF1E2D4A) : Colors.white),
+                        borderRadius: BorderRadius.circular(14.scale),
+                        border: isSelected
+                            ? null
+                            : Border.all(
+                                color: isDarkMode ? Colors.grey[700]! : Colors.grey[200]!,
+                              ),
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.08),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Row(
+                        children: [
+                          Text(emoji, style: TextStyle(fontSize: 16.sp)),
+                          SizedBox(width: 6.w),
+                          Text(
+                            label,
+                            style: TextStyle(
+                              fontSize: 13.sp,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                              color: isSelected
+                                  ? Colors.white
+                                  : (isDarkMode ? Colors.grey[300] : Colors.grey[600]),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                ),
-              ),
-            );
-          },
-        ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -376,7 +678,7 @@ class HomeScreen extends StatelessWidget {
             'เกิดข้อผิดพลาด 😅',
             style: TextStyle(
               fontSize: 18,
-              color: Colors.grey[600],
+              color: AppTheme.brandPurple,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -402,7 +704,7 @@ class HomeScreen extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  AppTheme.primaryOrange.withValues(alpha: 0.1),
+                  AppTheme.brandPurple.withValues(alpha: 0.1),
                   AppTheme.accentYellow.withValues(alpha: 0.1),
                 ],
               ),
@@ -411,7 +713,7 @@ class HomeScreen extends StatelessWidget {
             child: const Icon(
               Icons.search_off,
               size: 60,
-              color: AppTheme.primaryOrange,
+              color: AppTheme.brandPurple,
             ),
           ),
           const SizedBox(height: 20),
@@ -443,7 +745,7 @@ class HomeScreen extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  AppTheme.primaryOrange.withValues(alpha: 0.1),
+                  AppTheme.brandPurple.withValues(alpha: 0.1),
                   AppTheme.accentYellow.withValues(alpha: 0.1),
                 ],
               ),
@@ -452,7 +754,7 @@ class HomeScreen extends StatelessWidget {
             child: const Icon(
               Icons.restaurant_menu,
               size: 60,
-              color: AppTheme.primaryOrange,
+              color: AppTheme.brandPurple,
             ),
           ),
           const SizedBox(height: 20),
@@ -512,32 +814,44 @@ class HomeScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12), // Reduced top padding from 16 to 8
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 title,
-                style: const TextStyle(
-                  fontSize: 20,
+                style: TextStyle(
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
+                  color: isDarkMode ? Colors.white : Colors.black87,
                 ),
               ),
-              TextButton(
-                onPressed: () {}, // View all functionality
-                child: const Text(
-                  'ดูทั้งหมด',
-                  style: TextStyle(color: AppTheme.primaryOrange),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => SeeAllScreen(title: title, recipes: recipes),
+                    ),
+                  );
+                },
+                child: Text(
+                  'See all',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.brandPurple,
+                  ),
                 ),
               ),
             ],
           ),
         ),
         SizedBox(
-          height: 244, // Increased from 220 to accommodate tags
+          height: 200,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: recipes.length,
             itemBuilder: (context, index) {
               final recipe = recipes[index];
@@ -613,7 +927,7 @@ class _ShimmerCardState extends State<_ShimmerCard>
 }
 
 
-// Recommendation Card for Horizontal List
+// Recommendation Card for Horizontal List — Clean Design
 class _RecommendationCard extends StatelessWidget {
   final Recipe recipe;
   final bool isDarkMode;
@@ -634,131 +948,135 @@ class _RecommendationCard extends StatelessWidget {
         }
       },
       child: Container(
-        width: 200,
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        child: Card(
-          elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Stack(
-                children: [
-                   Image.network(
+        width: 180,
+        margin: const EdgeInsets.only(right: 12),
+        decoration: BoxDecoration(
+          color: isDarkMode ? const Color(0xFF1E2D4A) : Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Image with heart icon
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+                  child: Image.network(
                     recipe.imageUrl,
-                    height: 110, // Reduced from 115
+                    height: 110,
                     width: double.infinity,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) => Container(
                       height: 110,
-                      color: Colors.grey[200],
-                      child: const Icon(Icons.broken_image, color: Colors.grey),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+                      ),
+                      child: const Icon(Icons.broken_image, color: Colors.grey, size: 32),
                     ),
                   ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black12,
-                            blurRadius: 4,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        recipe.isLiked ? Icons.favorite : Icons.favorite_border,
-                        size: 18,
-                        color: recipe.isLiked ? Colors.red : Colors.grey,
-                      ),
+                ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      recipe.isLiked ? Icons.favorite : Icons.favorite_border,
+                      size: 18,
+                      color: recipe.isLiked ? Colors.red : Colors.grey[400],
                     ),
                   ),
-                ],
-              ),
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      recipe.title,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+            // Info section
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    recipe.title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: isDarkMode ? Colors.white : Colors.black87,
                     ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(Icons.timer_outlined, size: 14, color: Colors.grey),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${recipe.prepTime} นาที',
-                          style: const TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                    // recommendation tags
-                    if ((recipe.tags ?? []).isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      SizedBox(
-                        height: 20,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          separatorBuilder: (_, __) => const SizedBox(width: 4),
-                          itemCount: (recipe.tags ?? []).length > 2 ? 2 : (recipe.tags ?? []).length,
-                          itemBuilder: (context, i) {
-                            return Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppTheme.primaryOrange.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  (recipe.tags ?? [])[i],
-                                  style: const TextStyle(
-                                    fontSize: 9,
-                                    color: AppTheme.primaryOrange,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  // Time + Like in one row
+                  Row(
+                    children: [
+                      Icon(Icons.schedule, size: 13, color: Colors.grey[400]),
+                      const SizedBox(width: 3),
+                      Text(
+                        '${recipe.prepTime} นาที',
+                        style: TextStyle(fontSize: 11, color: Colors.grey[400]),
+                      ),
+                      const SizedBox(width: 10),
+                      const Icon(Icons.favorite, size: 13, color: Colors.red),
+                      const SizedBox(width: 3),
+                      Text(
+                        '${recipe.likeCount}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: isDarkMode ? Colors.white70 : Colors.black54,
                         ),
                       ),
                     ],
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const Icon(Icons.favorite, size: 14, color: Colors.red),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${recipe.likeCount}',
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                        ),
-                        const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryOrange.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(Icons.add, size: 16, color: AppTheme.primaryOrange),
-                        ),
-                      ],
+                  ),
+                  // Tags
+                  if ((recipe.tags ?? []).isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    SizedBox(
+                      height: 22,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        separatorBuilder: (_, __) => const SizedBox(width: 4),
+                        itemCount: (recipe.tags ?? []).length > 2 ? 2 : (recipe.tags ?? []).length,
+                        itemBuilder: (context, i) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: AppTheme.brandPurple.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Center(
+                              child: Text(
+                                (recipe.tags ?? [])[i],
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppTheme.brandPurple,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
                     ),
                   ],
-                ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -767,6 +1085,10 @@ class _RecommendationCard extends StatelessWidget {
 
 void _showFilterSheet(BuildContext context) {
     final recipeService = RecipeService();
+    final homeBloc = context.read<HomeBloc>();
+    final currentState = homeBloc.state;
+    final initialCategoryIds = currentState is HomeLoaded ? currentState.selectedFilterCategoryIds : <int>[];
+    final initialTagIds = currentState is HomeLoaded ? currentState.selectedFilterTagIds : <int>[];
     
     showModalBottomSheet(
       context: context,
@@ -783,7 +1105,7 @@ void _showFilterSheet(BuildContext context) {
                   color: Colors.white,
                   borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                 ),
-                child: const Center(child: CircularProgressIndicator(color: AppTheme.primaryOrange)),
+                child: const Center(child: CircularProgressIndicator(color: AppTheme.brandPurple)),
               );
             }
 
@@ -793,7 +1115,9 @@ void _showFilterSheet(BuildContext context) {
             return _FilterSheetContent(
               categories: categories,
               tags: tags,
-              parentContext: context,
+              homeBloc: homeBloc,
+              initialCategoryIds: initialCategoryIds,
+              initialTagIds: initialTagIds,
             );
           },
         );
@@ -804,12 +1128,16 @@ void _showFilterSheet(BuildContext context) {
 class _FilterSheetContent extends StatefulWidget {
   final List<CategoryModel> categories;
   final List<TagModel> tags;
-  final BuildContext parentContext;
+  final HomeBloc homeBloc;
+  final List<int> initialCategoryIds;
+  final List<int> initialTagIds;
 
   const _FilterSheetContent({
     required this.categories,
     required this.tags,
-    required this.parentContext,
+    required this.homeBloc,
+    this.initialCategoryIds = const [],
+    this.initialTagIds = const [],
   });
 
   @override
@@ -817,8 +1145,15 @@ class _FilterSheetContent extends StatefulWidget {
 }
 
 class _FilterSheetContentState extends State<_FilterSheetContent> {
-  final Set<int> _selectedCategoryIds = {};
-  final Set<int> _selectedTagIds = {};
+  late final Set<int> _selectedCategoryIds;
+  late final Set<int> _selectedTagIds;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedCategoryIds = Set<int>.from(widget.initialCategoryIds);
+    _selectedTagIds = Set<int>.from(widget.initialTagIds);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -880,7 +1215,7 @@ class _FilterSheetContentState extends State<_FilterSheetContent> {
                   if (widget.categories.isNotEmpty) ...[
                     const Row(
                       children: [
-                        Icon(Icons.category, color: AppTheme.primaryOrange, size: 20),
+                        Icon(Icons.category, color: AppTheme.brandPurple, size: 20),
                         SizedBox(width: 8),
                         Text('หมวดหมู่', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       ],
@@ -894,13 +1229,13 @@ class _FilterSheetContentState extends State<_FilterSheetContent> {
                         return FilterChip(
                           label: Text(cat.categoryName),
                           selected: isSelected,
-                          selectedColor: AppTheme.primaryOrange.withOpacity(0.2),
-                          checkmarkColor: AppTheme.primaryOrange,
+                          selectedColor: AppTheme.brandPurple.withOpacity(0.2),
+                          checkmarkColor: AppTheme.brandPurple,
                           backgroundColor: Colors.grey[100],
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
                             side: BorderSide(
-                              color: isSelected ? AppTheme.primaryOrange : Colors.grey[300]!,
+                              color: isSelected ? AppTheme.brandPurple : Colors.grey[300]!,
                             ),
                           ),
                           onSelected: (_) {
@@ -971,7 +1306,7 @@ class _FilterSheetContentState extends State<_FilterSheetContent> {
               height: 50,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryOrange,
+                  backgroundColor: AppTheme.brandPurple,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
                   elevation: 4,
                 ),
@@ -981,9 +1316,9 @@ class _FilterSheetContentState extends State<_FilterSheetContent> {
 
                   if (categoryIds.isEmpty && tagIds.isEmpty) {
                     // No filter selected → reload all
-                    widget.parentContext.read<HomeBloc>().add(LoadHomeRecipes());
+                    widget.homeBloc.add(LoadHomeRecipes());
                   } else {
-                    widget.parentContext.read<HomeBloc>().add(
+                    widget.homeBloc.add(
                       FilterSearchRecipes(categoryIds: categoryIds, tagIds: tagIds),
                     );
                   }

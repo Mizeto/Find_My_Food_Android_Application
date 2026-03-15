@@ -4,7 +4,7 @@ import '../../../data/models/notification_model.dart';
 import '../../auth/services/auth_service.dart';
 
 class NotificationApiService {
-  final String baseUrl = 'https://find-my-food-api.onrender.com';
+  static const String baseUrl = 'https://find-my-food-api.onrender.com';
   final AuthService _authService = AuthService();
 
   Future<Map<String, String>> _getHeaders() async {
@@ -19,11 +19,15 @@ class NotificationApiService {
   /// GET /notification/getAllNotification
   Future<List<NotificationModel>> getAllNotifications() async {
     try {
+      final headers = await _getHeaders();
+      final url = '$baseUrl/notification/getAllNotification';
+      
       final response = await http.get(
-        Uri.parse('$baseUrl/notification/getAllNotification'),
-        headers: await _getHeaders(),
+        Uri.parse(url),
+        headers: headers,
       );
 
+      
       if (response.statusCode == 200) {
         final decoded = json.decode(response.body);
         List<dynamic> list = [];
@@ -42,7 +46,6 @@ class NotificationApiService {
         throw Exception('Failed to load notifications: ${response.statusCode}');
       }
     } catch (e) {
-      print('🔔 Error getAllNotifications: $e');
       return [];
     }
   }
@@ -50,8 +53,10 @@ class NotificationApiService {
   /// GET /notification/getUnreadNotificationCount
   Future<int> getUnreadCount() async {
     try {
+      final url = '$baseUrl/notification/getUnreadNotificationCount';
+      
       final response = await http.get(
-        Uri.parse('$baseUrl/notification/getUnreadNotificationCount'),
+        Uri.parse(url),
         headers: await _getHeaders(),
       );
 
@@ -79,7 +84,6 @@ class NotificationApiService {
         return 0;
       }
     } catch (e) {
-      print('🔔 Error getUnreadCount: $e');
       return 0;
     }
   }
@@ -98,7 +102,6 @@ class NotificationApiService {
 
       return response.statusCode == 200;
     } catch (e) {
-      print('🔔 Error markAsRead: $e');
       return false;
     }
   }
@@ -112,7 +115,6 @@ class NotificationApiService {
       );
       return response.statusCode == 200;
     } catch (e) {
-      print('🔔 Error sendTestExpirePush: $e');
       return false;
     }
   }

@@ -3,10 +3,13 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-// Import theme
+// Import core
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_cubit.dart';
+import 'core/navigation/navigation_cubit.dart';
+import 'core/utils/responsive_helper.dart';
 
 // Import repositories
 import 'data/repositories/recipe_repository.dart';
@@ -25,17 +28,18 @@ import 'features/auth/screens/google_register_screen.dart';
 import 'features/profile/screens/profile_screen.dart';
 import 'features/scan_food/screens/scan_food_screen.dart';
 import 'features/notification/services/notification_service.dart';
+import 'features/auth/screens/onboarding_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   try {
     await Firebase.initializeApp();
     await NotificationService().initialize();
   } catch (e) {
-    print('❌ Firebase Initialization Error: $e');
+    // Firebase initialization might fail if config is missing, silting it as requested
   }
-  
+
   await initializeDateFormatting('th', null);
 
   runApp(const MyApp());
@@ -59,10 +63,13 @@ class MyApp extends StatelessWidget {
 
         // Notification Bloc
         BlocProvider(
-          create: (context) => NotificationBloc(NotificationApiService())
-            ..add(FetchNotifications()),
+          create: (context) =>
+              NotificationBloc(NotificationApiService())
+                ..add(FetchNotifications()),
         ),
 
+        // Navigation Cubit
+        BlocProvider(create: (context) => NavigationCubit()),
       ],
       child: BlocBuilder<ThemeCubit, bool>(
         builder: (context, isDarkMode) {
@@ -77,10 +84,7 @@ class MyApp extends StatelessWidget {
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,
             ],
-            supportedLocales: const [
-              Locale('th', 'TH'),
-              Locale('en', 'US'),
-            ],
+            supportedLocales: const [Locale('th', 'TH'), Locale('en', 'US')],
             locale: const Locale('th', 'TH'),
             home: const AuthWrapper(),
             // home: const MainNavigationScreen(), // Bypassed Login
@@ -97,28 +101,63 @@ class AuthWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<AuthCubit, AuthState>(
-      builder: (context, state) {
-        if (state is AuthLoading || state is AuthInitial) {
-          return const SplashScreen();
-        }
-
-        if (state is AuthAuthenticated) {
-          final isGuest = state.user.isGuest;
-          return BlocProvider(
-            create: (context) => HomeBloc(
-              repository: context.read<RecipeRepository>(),
-            )..add(LoadHomeRecipes(isGuest: isGuest)),
-            child: const MainNavigationScreen(),
-          );
-        }
-
-        if (state is AuthGoogleRegistrationRequired) {
-          return GoogleRegisterScreen(tempToken: state.tempToken);
-        }
-
-        return const LoginScreen();
+    ResponsiveHelper().init(context);
+    return BlocListener<AuthCubit, AuthState>(
+      listenWhen: (previous, current) =>
+          (previous is AuthUnauthenticated ||
+              previous is AuthInitial ||
+              previous is AuthLoading) &&
+          current is AuthAuthenticated,
+      listener: (context, state) {
+        // Reset to Home tab (0) whenever a new authenticated session starts
+        context.read<NavigationCubit>().setTab(0);
+        // Refresh notifications upon authentication
+        context.read<NotificationBloc>().add(FetchNotifications());
       },
+      child: BlocBuilder<AuthCubit, AuthState>(
+        builder: (context, state) {
+          if (state is AuthLoading || state is AuthInitial) {
+            return const SplashScreen();
+          }
+
+          if (state is AuthAuthenticated) {
+            final isGuest = state.user.isGuest;
+            return BlocProvider(
+              create: (context) =>
+                  HomeBloc(repository: context.read<RecipeRepository>())
+                    ..add(LoadHomeRecipes(isGuest: isGuest)),
+              child: const MainNavigationScreen(),
+            );
+          }
+
+          if (state is AuthGoogleRegistrationRequired) {
+            return GoogleRegisterScreen(tempToken: state.tempToken);
+          }
+
+          if (state is AuthError) {
+            final prefs = SharedPreferences.getInstance();
+            return FutureBuilder<SharedPreferences>(
+              future: prefs,
+              builder: (context, snapshot) {
+                final isCompleted = snapshot.data?.getBool('onboarding_completed') ?? false;
+                if (isCompleted) return const LoginScreen();
+                return const OnboardingScreen();
+              },
+            );
+          }
+
+          if (state is AuthUnauthenticated) {
+            final isCompleted = state.isOnboardingCompleted;
+            if (isCompleted == true) {
+              return const LoginScreen();
+            }
+            return const OnboardingScreen();
+          }
+
+          // Catch-all: show onboarding if not completed, otherwise login
+          return const OnboardingScreen();
+        },
+      ),
     );
   }
 }
@@ -131,7 +170,7 @@ class SplashScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(gradient: AppTheme.primaryGradient),
+        decoration: const BoxDecoration(gradient: AppTheme.brandGradient),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -204,7 +243,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         icon: const Icon(Icons.restaurant_menu_outlined),
         selectedIcon: Icon(
           Icons.restaurant_menu,
-          color: AppTheme.primaryOrange,
+          color: const Color(0xFF8E54E2),
         ),
         label: 'เมนู',
       ),
@@ -217,7 +256,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           icon: const Icon(Icons.document_scanner_outlined),
           selectedIcon: Icon(
             Icons.document_scanner,
-            color: AppTheme.primaryOrange,
+            color: const Color(0xFF8E54E2),
           ),
           label: 'สแกน',
         ),
@@ -231,7 +270,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     currentDestinations.add(
       NavigationDestination(
         icon: const Icon(Icons.shopping_cart_outlined),
-        selectedIcon: Icon(Icons.shopping_cart, color: AppTheme.primaryGreen),
+        selectedIcon: Icon(Icons.shopping_cart, color: const Color(0xFF8E54E2)),
         label: 'จ่ายตลาด',
       ),
     );
@@ -240,20 +279,17 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     currentDestinations.add(
       NavigationDestination(
         icon: const Icon(Icons.person_outline),
-        selectedIcon: Icon(Icons.person, color: AppTheme.primaryOrange),
+        selectedIcon: Icon(Icons.person, color: const Color(0xFF8E54E2)),
         label: 'โปรไฟล์',
       ),
     );
 
-    // Ensure index is valid
-    if (_currentIndex >= currentScreens.length) {
-      _currentIndex = 0;
-    }
+    final selectedIndex = context.watch<NavigationCubit>().state;
 
     return Scaffold(
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
-        child: currentScreens[_currentIndex],
+        child: currentScreens[selectedIndex],
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -268,16 +304,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         child: ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           child: NavigationBar(
-            selectedIndex: _currentIndex,
+            selectedIndex: selectedIndex,
             onDestinationSelected: (index) {
-              setState(() {
-                _currentIndex = index;
-              });
+              context.read<NavigationCubit>().setTab(index);
             },
             backgroundColor: isDarkMode
                 ? const Color(0xFF16213E)
                 : Colors.white,
-            indicatorColor: AppTheme.primaryOrange.withOpacity(0.2),
+            indicatorColor: const Color(0xFF8E54E2).withOpacity(0.2),
             destinations: currentDestinations,
           ),
         ),

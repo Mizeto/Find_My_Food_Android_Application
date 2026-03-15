@@ -44,10 +44,47 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
     // Event ใหม่: ค้นหาตามคำที่พิมพ์
     on<SearchRecipes>((event, emit) async {
-      emit(HomeLoading()); // หมุนติ้วๆ
+      final currentState = state;
+      final prevCategories = currentState is HomeLoaded ? currentState.categories : const <Map<String, dynamic>>[];
+      final prevRecommendedForYou = currentState is HomeLoaded ? currentState.recommendedForYou : const <Recipe>[];
+      final prevRecommendedFromStock = currentState is HomeLoaded ? currentState.recommendedFromStock : const <Recipe>[];
+      final prevFilterCatIds = currentState is HomeLoaded ? currentState.selectedFilterCategoryIds : const <int>[];
+      final prevFilterTagIds = currentState is HomeLoaded ? currentState.selectedFilterTagIds : const <int>[];
+
+      emit(HomeLoading());
       try {
-        final recipes = await repository.getRecipes(search: event.query);
-        emit(HomeLoaded(recipes: recipes));
+        List<Recipe> recipes = await repository.getRecipes(search: event.query);
+        
+        // Local filtering if filters are active
+        if (prevFilterCatIds.isNotEmpty || prevFilterTagIds.isNotEmpty) {
+          recipes = recipes.where((recipe) {
+            // Check category match
+            bool categoryMatch = prevFilterCatIds.isEmpty || 
+                (recipe.tags != null && recipe.tags!.any((t) {
+                  // Fallback string matching or rely on tags matching ids if id maps nicely.
+                  // Since Recipe model only has List<String> for tags, local filtering is best-effort
+                  // based on whether the string tag is in the selected categories.
+                  // For robust filtering, we would need Category IDs on the Recipe model.
+                  // But we will do a best effort: if we don't have enough data, we won't strictly filter category.
+                  return true; 
+                }));
+            
+            // Check tag match
+            bool tagMatch = prevFilterTagIds.isEmpty || 
+                (recipe.tags != null && recipe.tags!.isNotEmpty); // Best effort placeholder
+            
+            return categoryMatch && tagMatch;
+          }).toList();
+        }
+
+        emit(HomeLoaded(
+          recipes: recipes,
+          categories: prevCategories,
+          recommendedForYou: prevRecommendedForYou,
+          recommendedFromStock: prevRecommendedFromStock,
+          selectedFilterCategoryIds: prevFilterCatIds,
+          selectedFilterTagIds: prevFilterTagIds,
+        ));
       } catch (e) {
         emit(HomeError(e.toString()));
       }
@@ -97,13 +134,25 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
     // Event: ค้นหาตามฟิลเตอร์ (Categories + Tags)
     on<FilterSearchRecipes>((event, emit) async {
+      final currentState = state;
+      final prevCategories = currentState is HomeLoaded ? currentState.categories : const <Map<String, dynamic>>[];
+      final prevRecommendedForYou = currentState is HomeLoaded ? currentState.recommendedForYou : const <Recipe>[];
+      final prevRecommendedFromStock = currentState is HomeLoaded ? currentState.recommendedFromStock : const <Recipe>[];
+
       emit(HomeLoading());
       try {
         final recipes = await repository.searchWithFilter(
           categoryIds: event.categoryIds,
           tagIds: event.tagIds,
         );
-        emit(HomeLoaded(recipes: recipes));
+        emit(HomeLoaded(
+          recipes: recipes,
+          categories: prevCategories,
+          recommendedForYou: prevRecommendedForYou,
+          recommendedFromStock: prevRecommendedFromStock,
+          selectedFilterCategoryIds: event.categoryIds,
+          selectedFilterTagIds: event.tagIds,
+        ));
       } catch (e) {
         emit(HomeError(e.toString()));
       }

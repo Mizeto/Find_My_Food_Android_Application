@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/theme_cubit.dart';
+import '../../../core/utils/responsive_helper.dart';
 import '../services/shopping_service.dart';
 import '../models/shopping_model.dart';
 import '../models/food_model.dart'; // For UnitModel
@@ -78,16 +80,21 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
     final TextEditingController nameController = TextEditingController();
     // Default type based on current tab
     String selectedType = _isMarketMode ? 'market' : 'recipe';
+    final isDarkMode = context.read<ThemeCubit>().isDarkMode;
     
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('สร้างรายการ${_isMarketMode ? "ตลาด" : "สูตรอาหาร"}ใหม่'),
+        backgroundColor: isDarkMode ? const Color(0xFF1E2D4A) : Colors.white,
+        title: Text('สร้างรายการ${_isMarketMode ? "ตลาด" : "สูตรอาหาร"}ใหม่', style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87, fontSize: 18.sp)),
         content: TextField(
           controller: nameController,
-          decoration: const InputDecoration(
+          style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87, fontSize: 16.sp),
+          decoration: InputDecoration(
             hintText: 'ชื่อรากการ (เช่น ตลาดสด, เมนูเย็นนี้)',
-            border: OutlineInputBorder(),
+            hintStyle: TextStyle(color: isDarkMode ? Colors.white54 : Colors.grey, fontSize: 14.sp),
+            border: const OutlineInputBorder(),
+            contentPadding: EdgeInsets.all(12.scale),
           ),
           autofocus: true,
         ),
@@ -174,50 +181,75 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-          top: 20, left: 20, right: 20
-        ),
-        child: StatefulBuilder(
-          builder: (context, setModalState) {
+      backgroundColor: Colors.transparent, // to allow custom decoration inside
+      builder: (context) {
+        final isDarkMode = context.read<ThemeCubit>().isDarkMode;
+        return Container(
+          decoration: BoxDecoration(
+            color: isDarkMode ? const Color(0xFF1E2D4A) : Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20.scale)),
+          ),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20.h,
+            top: 20.h, left: 20.w, right: 20.w
+          ),
+          child: StatefulBuilder(
+            builder: (context, setModalState) {
              return Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
                   isEditing ? 'แก้ไขรายการ' : 'เพิ่มรายการใหม่',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold, color: isDarkMode ? Colors.white : Colors.black87),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: 20.h),
                 
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: 'ชื่อวัตถุดิบ', border: OutlineInputBorder()),
-                  enabled: !isEditing, 
-                ),
-                const SizedBox(height: 12),
+                  TextField(
+                    controller: nameController,
+                    style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87, fontSize: 16.sp),
+                    decoration: InputDecoration(
+                      labelText: 'ชื่อวัตถุดิบ', 
+                      labelStyle: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black54, fontSize: 14.sp),
+                      border: const OutlineInputBorder(),
+                      contentPadding: EdgeInsets.all(12.scale),
+                    ),
+                    enabled: !isEditing, 
+                  ),
+                SizedBox(height: 12.h),
                 
                 Row(
                   children: [
                     Expanded(
                       flex: 1,
                       child: TextField(
-                        controller: qtyController,
-                        decoration: const InputDecoration(labelText: 'จำนวน', border: OutlineInputBorder()),
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          controller: qtyController,
+                          style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87, fontSize: 16.sp),
+                          decoration: InputDecoration(
+                            labelText: 'จำนวน', 
+                            labelStyle: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black54, fontSize: 14.sp),
+                            border: const OutlineInputBorder(),
+                            contentPadding: EdgeInsets.all(12.scale),
+                          ),
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 2,
-                      child: DropdownButtonFormField<int>(
-                        value: selectedUnitId,
-                        isExpanded: true,
-                        decoration: const InputDecoration(labelText: 'หน่วย', border: OutlineInputBorder()),
-                        items: _units.map((u) => DropdownMenuItem(value: u.unitId, child: Text(u.unitName))).toList(),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: DropdownButtonFormField<int>(
+                          value: selectedUnitId,
+                          isExpanded: true,
+                          dropdownColor: isDarkMode ? const Color(0xFF1A1A2E) : Colors.white,
+                          style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87, fontSize: 16.sp),
+                          decoration: InputDecoration(
+                            labelText: 'หน่วย', 
+                            labelStyle: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black54, fontSize: 14.sp),
+                            border: const OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12.w),
+                          ),
+                        items: _units.map((u) => DropdownMenuItem(value: u.unitId, child: Text(u.unitName, style: TextStyle(fontSize: 14.sp)))).toList(),
                         onChanged: (val) {
                           setModalState(() => selectedUnitId = val);
                         },
@@ -255,16 +287,17 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryGreen,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: EdgeInsets.symmetric(vertical: 16.h),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.scale)),
                   ),
-                  child: Text(isEditing ? 'บันทึก' : 'เพิ่มรายการ', style: const TextStyle(fontSize: 16)),
+                  child: Text(isEditing ? 'บันทึก' : 'เพิ่มรายการ', style: TextStyle(fontSize: 16.sp)),
                 ),
               ],
             );
           }
         ),
-      ),
-    );
+      );
+    });
   }
 
   void _showError(String message) {
@@ -278,18 +311,18 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: EdgeInsets.symmetric(vertical: 12.h),
         decoration: BoxDecoration(
           color: isSelected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: isSelected ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))] : null,
+          borderRadius: BorderRadius.circular(12.scale),
+          boxShadow: isSelected ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4.scale, offset: Offset(0, 2.h))] : null,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 18, color: isSelected ? (_isMarketMode ? AppTheme.primaryGreen : AppTheme.primaryOrange) : Colors.grey),
-            const SizedBox(width: 8),
-            Text(label, style: TextStyle(fontSize: 14, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? Colors.black : Colors.grey)),
+            Icon(icon, size: 18.scale, color: isSelected ? (label == 'ตลาด' ? AppTheme.brandBlue : AppTheme.brandPurple) : Colors.grey),
+            SizedBox(width: 8.w),
+            Text(label, style: TextStyle(fontSize: 14.sp, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? Colors.black : Colors.grey)),
           ],
         ),
       ),
@@ -298,9 +331,10 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = context.watch<ThemeCubit>().isDarkMode;
     final filtered = _filteredLists;
-    final activeColor = _isMarketMode ? AppTheme.primaryGreen : AppTheme.primaryOrange;
-    final activeGradient = _isMarketMode ? AppTheme.greenGradient : AppTheme.primaryGradient;
+    final activeColor = _isMarketMode ? AppTheme.brandBlue : AppTheme.brandPurple;
+    final activeGradient = isDarkMode ? AppTheme.brandGradientDark : AppTheme.brandGradient;
 
     return Scaffold(
       body: RefreshIndicator(
@@ -311,7 +345,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
           slivers: [
             // AppBar
             SliverAppBar(
-              expandedHeight: 100,
+              expandedHeight: 100.h,
               floating: true,
               pinned: true,
               automaticallyImplyLeading: false,
@@ -323,7 +357,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                     _isMarketMode 
                       ? 'รายการจ่ายตลาด (${filtered.length}) 🛒' 
                       : 'รายการจากสูตร (${filtered.length}) 📝',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.white),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18.sp, color: Colors.white),
                   ),
                 ),
               ),
@@ -332,12 +366,12 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
             // Tab Toggle
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 0),
                 child: Container(
-                  padding: const EdgeInsets.all(4),
+                  padding: EdgeInsets.all(4.scale),
                   decoration: BoxDecoration(
                     color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(15.scale),
                   ),
                   child: Row(
                     children: [
@@ -372,7 +406,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
             )
           else
             SliverPadding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16.scale),
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
@@ -384,7 +418,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
               ),
             ),
             
-            const SliverToBoxAdapter(child: SizedBox(height: 100)),
+            SliverToBoxAdapter(child: SizedBox(height: 100.h)),
           ],
         ),
       ),
@@ -405,17 +439,18 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
 
   Widget _buildShoppingListCard(ShoppingListModel list) {
     final isEditing = _editingLists[list.shoppingListId] ?? false;
+    final isDarkMode = context.watch<ThemeCubit>().isDarkMode;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 20),
+      margin: EdgeInsets.only(bottom: 20.h),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
+        color: isDarkMode ? const Color(0xFF1E2D4A) : Colors.white,
+        borderRadius: BorderRadius.circular(15.scale),
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            blurRadius: 10.scale,
+            offset: Offset(0, 4.h),
           ),
         ],
       ),
@@ -424,29 +459,29 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
         children: [
           // Header
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16.scale),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: EdgeInsets.all(8.scale),
                   decoration: BoxDecoration(
-                    color: list.shoppingType == 'recipe'
-                      ? AppTheme.primaryOrange.withOpacity(0.1)
-                      : AppTheme.primaryGreen.withOpacity(0.1),
+                    color: (list.shoppingType == 'recipe' ? AppTheme.brandPurple : AppTheme.brandBlue).withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     list.shoppingType == 'recipe' ? Icons.menu_book : Icons.store,
-                    color: list.shoppingType == 'recipe' ? AppTheme.primaryOrange : AppTheme.primaryGreen,
+                    color: list.shoppingType == 'recipe' ? AppTheme.brandPurple : AppTheme.brandBlue,
+                    size: 24.scale,
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12.w),
                 Expanded(
-                  child: Text(
+                   child: Text(
                     list.listName,
-                    style: const TextStyle(
-                      fontSize: 18,
+                    style: TextStyle(
+                      fontSize: 18.sp,
                       fontWeight: FontWeight.bold,
+                      color: isDarkMode ? Colors.white : Colors.black87,
                     ),
                   ),
                 ),
@@ -459,9 +494,9 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                       // Delete ENTIRE List Button (Only in Edit Mode)
                       TextButton(
                         onPressed: () => _confirmDeleteList(list),
-                        child: const Text('ลบรายการ', style: TextStyle(color: Colors.red)),
+                        child: Text('ลบรายการ', style: TextStyle(color: Colors.red, fontSize: 14.sp)),
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8.w),
                       // Done Button
                       TextButton(
                         onPressed: () {
@@ -469,7 +504,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                             _editingLists[list.shoppingListId] = false;
                           });
                         },
-                        child: const Text('เสร็จสิ้น', style: TextStyle(color: AppTheme.primaryGreen)),
+                        child: Text('เสร็จสิ้น', style: TextStyle(color: list.shoppingType == 'recipe' ? AppTheme.brandPurple : AppTheme.brandBlue, fontSize: 14.sp)),
                       ),
                     ],
                   )
@@ -480,7 +515,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                         _editingLists[list.shoppingListId] = true;
                       });
                     },
-                    child: const Text('แก้ไข', style: TextStyle(color: Colors.grey)),
+                    child: Text('แก้ไข', style: TextStyle(color: Colors.grey, fontSize: 14.sp)),
                   ),
               ],
             ),
@@ -490,22 +525,22 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
           
           // Items
           if (list.items.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(24),
-              child: Center(child: Text('ยังไม่มีรายการในตระกร้านี้', style: TextStyle(color: Colors.grey))),
+             Padding(
+              padding: EdgeInsets.all(24.scale),
+              child: Center(child: Text('ยังไม่มีรายการในตระกร้านี้', style: TextStyle(color: isDarkMode ? Colors.white54 : Colors.grey, fontSize: 14.sp))),
             )
           else
             ListView.separated(
               physics: const NeverScrollableScrollPhysics(),
               shrinkWrap: true,
               itemCount: list.items.length,
-              separatorBuilder: (context, index) => const Divider(height: 1, indent: 60),
+              separatorBuilder: (context, index) => Divider(height: 1, indent: 60.w),
               itemBuilder: (context, index) {
                 final item = list.items[index];
                 return InkWell(
                   onTap: isEditing ? null : () => _showItemDialog(item: item), // Disable edit dialog in edit mode
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
                     child: Row(
                       children: [
                         // Checkbox (Hide in Edit Mode)
@@ -527,16 +562,16 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                         
                         // Image placeholder
                         Container(
-                          width: 50,
-                          height: 50,
+                          width: 50.scale,
+                          height: 50.scale,
                           decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.grey[200]!),
+                            color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.grey[100],
+                            borderRadius: BorderRadius.circular(8.scale),
+                            border: Border.all(color: isDarkMode ? Colors.white24 : Colors.grey[200]!),
                           ),
-                          child: Center(child: Icon(Icons.fastfood, size: 20, color: Colors.grey[400])),
+                          child: Center(child: Icon(Icons.fastfood, size: 20.scale, color: isDarkMode ? Colors.white54 : Colors.grey[400])),
                         ),
-                        const SizedBox(width: 16),
+                        SizedBox(width: 16.w),
                         
                         // Details
                         Expanded(
@@ -545,21 +580,22 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                             children: [
                               Text(
                                 item.itemName,
-                                style: const TextStyle(
-                                  fontSize: 16,
+                                style: TextStyle(
+                                  fontSize: 16.sp,
                                   fontWeight: FontWeight.w500,
+                                  color: isDarkMode ? Colors.white : Colors.black87,
                                 ),
                               ),
-                              const SizedBox(height: 4),
+                              SizedBox(height: 4.h),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
                                 decoration: BoxDecoration(
-                                  color: Colors.grey[100],
-                                  borderRadius: BorderRadius.circular(4),
+                                  color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(4.scale),
                                 ),
                                 child: Text(
                                   '${item.quantity.toStringAsFixed(0)} ${item.unitName ?? 'หน่วย'}',
-                                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                                  style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.grey[600], fontSize: 12.sp),
                                 ),
                               ),
                             ],
@@ -569,7 +605,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                         // Delete Item Button (Only in Edit Mode)
                         if (isEditing)
                           IconButton(
-                            icon: const Icon(Icons.delete_outline, color: Colors.deepOrange),
+                            icon: Icon(Icons.delete_outline, color: Colors.deepOrange, size: 24.scale),
                             onPressed: () => _confirmDeleteItem(item),
                           ),
                       ],
@@ -585,20 +621,21 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
           if (!isEditing)
             InkWell(
               onTap: () => _showItemDialog(listId: list.shoppingListId),
-              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(15)),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(15.scale)),
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                padding: EdgeInsets.symmetric(vertical: 12.h),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Icon(Icons.add_circle_outline, color: AppTheme.primaryGreen, size: 20),
-                    SizedBox(width: 8),
+                  children: [
+                    Icon(Icons.add_circle_outline, color: list.shoppingType == 'recipe' ? AppTheme.brandPurple : AppTheme.brandBlue, size: 20.scale),
+                    SizedBox(width: 8.w),
                     Text(
                       'เพิ่มวัตถุดิบลงในรายการนี้',
                       style: TextStyle(
-                        color: AppTheme.primaryGreen,
+                        color: list.shoppingType == 'recipe' ? AppTheme.brandPurple : AppTheme.brandBlue,
                         fontWeight: FontWeight.w600,
+                        fontSize: 14.sp,
                       ),
                     ),
                   ],
@@ -611,14 +648,16 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
   }
 
   Future<void> _confirmDeleteList(ShoppingListModel list) async {
+    final isDarkMode = context.read<ThemeCubit>().isDarkMode;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('ลบรายการ?'),
-        content: Text('คุณต้องการลบรายการ "${list.listName}" ใช่หรือไม่?'),
+        backgroundColor: isDarkMode ? const Color(0xFF1E2D4A) : Colors.white,
+        title: Text('ลบรายการ?', style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87, fontSize: 18.sp)),
+        content: Text('คุณต้องการลบรายการ "${list.listName}" ใช่หรือไม่?', style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black54, fontSize: 14.sp)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('ยกเลิก')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('ลบ', style: TextStyle(color: Colors.red))),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('ยกเลิก', style: TextStyle(fontSize: 14.sp))),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: Text('ลบ', style: TextStyle(color: Colors.red, fontSize: 14.sp))),
         ],
       ),
     );
@@ -639,14 +678,16 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
 
   Future<void> _confirmDeleteItem(ShoppingItemModel item) async {
      // Direct delete or confirm? Assuming direct for speed or confirm for safety. Let's do confirm.
+     final isDarkMode = context.read<ThemeCubit>().isDarkMode;
      final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('ลบสินค้า?'),
-        content: Text('คุณต้องการลบ "${item.itemName}" ใช่หรือไม่?'),
+        backgroundColor: isDarkMode ? const Color(0xFF1E2D4A) : Colors.white,
+        title: Text('ลบสินค้า?', style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87, fontSize: 18.sp)),
+        content: Text('คุณต้องการลบ "${item.itemName}" ใช่หรือไม่?', style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black54, fontSize: 14.sp)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('ยกเลิก')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('ลบ', style: TextStyle(color: Colors.red))),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('ยกเลิก', style: TextStyle(fontSize: 14.sp))),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: Text('ลบ', style: TextStyle(color: Colors.red, fontSize: 14.sp))),
         ],
       ),
     );
@@ -667,11 +708,11 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.shopping_bag_outlined, size: 80, color: Colors.grey[300]),
-          const SizedBox(height: 16),
-          Text('ยังไม่มีรายการซื้อของ', style: TextStyle(fontSize: 18, color: Colors.grey[600])),
-          const SizedBox(height: 8),
-          const Text('กด "สร้างรายการใหม่" เพื่อเริ่มใช้งาน', style: TextStyle(color: Colors.grey)),
+          Icon(Icons.shopping_bag_outlined, size: 80.scale, color: Colors.grey[300]),
+          SizedBox(height: 16.h),
+          Text('ยังไม่มีรายการซื้อของ', style: TextStyle(fontSize: 18.sp, color: Colors.grey[600])),
+          SizedBox(height: 8.h),
+          Text('กด "สร้างรายการใหม่" เพื่อเริ่มใช้งาน', style: TextStyle(color: Colors.grey, fontSize: 14.sp)),
         ],
       ),
     );

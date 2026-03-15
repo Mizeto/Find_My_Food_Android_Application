@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../data/models/recipe_model.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/theme_cubit.dart';
+import '../../../core/utils/responsive_helper.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/repositories/recipe_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/shopping_service.dart';
 import '../models/food_model.dart';
+import '../../../core/navigation/navigation_cubit.dart';
 
 class RecipeDetailScreen extends StatefulWidget {
   final Recipe recipe;
@@ -104,24 +107,26 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
   Widget build(BuildContext context) {
     // Use full recipe if available, otherwise fallback to widget.recipe
     final displayRecipe = _fullRecipe ?? widget.recipe;
+    final isDarkMode = context.watch<ThemeCubit>().isDarkMode;
 
     return Scaffold(
+      backgroundColor: isDarkMode ? const Color(0xFF1A1A2E) : const Color(0xFFF8F9FA),
       body: CustomScrollView(
         slivers: [
           // ... (AppBar uses displayRecipe or widget.recipe - mostly specific fields that won't change like image/title)
           SliverAppBar(
-            expandedHeight: 300,
+            expandedHeight: 300.h,
             pinned: true,
             stretch: true,
-            backgroundColor: AppTheme.primaryOrange,
+            backgroundColor: AppTheme.brandPurple,
             leading: Container(
-              margin: const EdgeInsets.all(8),
+              margin: EdgeInsets.all(8.scale),
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.3),
                 shape: BoxShape.circle,
               ),
               child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                icon: Icon(Icons.arrow_back, color: Colors.white, size: 24.scale),
                 onPressed: () => Navigator.pop(context, _isModified),
               ),
             ),
@@ -129,7 +134,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                // ... existing actions
                // Favorite Button with Animation
               Container(
-                margin: const EdgeInsets.all(8),
+                margin: EdgeInsets.all(8.scale),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.3),
                   shape: BoxShape.circle,
@@ -140,6 +145,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                     icon: Icon(
                       _isFavorite ? Icons.favorite : Icons.favorite_border,
                       color: _isFavorite ? Colors.red : Colors.white,
+                      size: 24.scale,
                     ),
                     onPressed: _toggleFavorite,
                   ),
@@ -147,13 +153,13 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
               ),
               // Share Button
               Container(
-                margin: const EdgeInsets.only(right: 8),
+                margin: EdgeInsets.only(right: 8.w),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.3),
                   shape: BoxShape.circle,
                 ),
                 child: IconButton(
-                  icon: const Icon(Icons.share, color: Colors.white),
+                  icon: Icon(Icons.share, color: Colors.white, size: 24.scale),
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('แชร์สูตรอาหาร...')),
@@ -176,8 +182,10 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                       displayRecipe.imageUrl,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) => Container(
-                        decoration: const BoxDecoration(
-                          gradient: AppTheme.primaryGradient,
+                        decoration: BoxDecoration(
+                          gradient: Theme.of(context).brightness == Brightness.dark 
+                              ? AppTheme.brandGradientDark 
+                              : AppTheme.brandGradient,
                         ),
                         child: const Icon(
                           Icons.broken_image,
@@ -203,9 +211,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                     ),
                     // Title at bottom
                     Positioned(
-                      bottom: 16,
-                      left: 16,
-                      right: 16,
+                      bottom: 16.h,
+                      left: 16.w,
+                      right: 16.w,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -213,33 +221,33 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                             displayRecipe.title,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 26,
+                            style: TextStyle(
+                              fontSize: 26.sp,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
                               shadows: [
                                 Shadow(
-                                  offset: Offset(0, 2),
-                                  blurRadius: 6,
+                                  offset: Offset(0, 2.h),
+                                  blurRadius: 6.scale,
                                   color: Colors.black45,
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: 8.h),
                           Wrap(
-                            spacing: 12,
-                            runSpacing: 8,
+                            spacing: 12.w,
+                            runSpacing: 8.h,
                             children: [
                               _buildInfoChip(
                                 Icons.access_time,
                                 '${displayRecipe.prepTime} นาที',
-                                AppTheme.primaryOrange,
+                                AppTheme.brandGradient.colors[0],
                               ),
                               _buildInfoChip(
                                 Icons.restaurant,
                                 'สูตรอาหาร',
-                                AppTheme.primaryGreen,
+                                AppTheme.brandGradient.colors[1],
                               ),
                             ],
                           ),
@@ -262,18 +270,18 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                   _buildSectionCard(
                     icon: Icons.description,
                     title: 'คำอธิบาย',
-                    color: AppTheme.primaryOrange,
+                    color: AppTheme.brandPurple,
                     child: Text(
                       displayRecipe.description,
                       style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[700],
+                        fontSize: 16.sp,
+                        color: isDarkMode ? Colors.white70 : Colors.grey[700],
                         height: 1.6,
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20.h),
 
                   // Ingredients Section
                   _buildSectionCard(
@@ -288,15 +296,15 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                             children: [
                               // Main Ingredients Section
                               if (displayRecipe.ingredients!.any((ing) => ing.isMainIngredient)) ...[
-                                const Text(
+                                Text(
                                   'วัตถุดิบหลัก',
                                   style: TextStyle(
-                                    fontSize: 14,
+                                    fontSize: 14.sp,
                                     fontWeight: FontWeight.bold,
-                                    color: AppTheme.primaryOrange,
+                                    color: AppTheme.brandPurple,
                                   ),
                                 ),
-                                const SizedBox(height: 8),
+                                SizedBox(height: 8.h),
                                 ...displayRecipe.ingredients!
                                     .where((ing) => ing.isMainIngredient)
                                     .map((ing) => _buildIngredientRow(ing)),
@@ -308,12 +316,12 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                                 Text(
                                   'วัตถุดิบย่อย / เครื่องปรุง',
                                   style: TextStyle(
-                                    fontSize: 14,
+                                    fontSize: 14.sp,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.teal[700],
                                   ),
                                 ),
-                                const SizedBox(height: 8),
+                                SizedBox(height: 8.h),
                                 ...displayRecipe.ingredients!
                                     .where((ing) => !ing.isMainIngredient)
                                     .map((ing) => _buildIngredientRow(ing)),
@@ -324,37 +332,37 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                             'ไม่มีข้อมูลวัตถุดิบ',
                             style: TextStyle(
                               fontSize: 16,
-                              color: Colors.grey[500],
+                              color: isDarkMode ? Colors.white54 : Colors.grey[500],
                               fontStyle: FontStyle.italic,
                             ),
                           ),
                   ),
 
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20.h),
 
                   // Cooking Method
                   _buildSectionCard(
                     icon: Icons.restaurant_menu,
                     title: 'วิธีทำ 👨‍🍳',
-                    color: AppTheme.primaryGreen,
+                    color: AppTheme.brandBlue,
                     child: _isLoadingDetails
                       ? const Center(child: CircularProgressIndicator())
                       : Text(
                           displayRecipe.cookingMethod,
                           style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[700],
+                            fontSize: 16.sp,
+                            color: isDarkMode ? Colors.white70 : Colors.grey[700],
                             height: 1.8,
                           ),
                         ),
                   ),
 
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20.h),
 
                   // Add to Shopping List Button
                   _buildAddToShoppingListButton(context),
 
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20.h),
 
                   // Tags Section
                   if (displayRecipe.tags != null && displayRecipe.tags!.isNotEmpty)
@@ -363,22 +371,22 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                       title: 'แท็ก 🏷️',
                       color: Colors.blueAccent,
                       child: Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
+                        spacing: 8.w,
+                        runSpacing: 8.h,
                         children: displayRecipe.tags!.map((tag) {
                           return Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
                             decoration: BoxDecoration(
-                              color: Colors.blueAccent.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: Colors.blueAccent.withValues(alpha: 0.3)),
+                              color: Colors.blueAccent.withValues(alpha: isDarkMode ? 0.2 : 0.1),
+                              borderRadius: BorderRadius.circular(20.scale),
+                              border: Border.all(color: Colors.blueAccent.withValues(alpha: isDarkMode ? 0.5 : 0.3)),
                             ),
                             child: Text(
                               '#$tag',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: Colors.blueAccent,
-                                fontWeight: FontWeight.w600,
+                              style: TextStyle(
+                                fontSize: 13.sp,
+                                color: isDarkMode ? const Color(0xFF64B5F6) : Colors.blueAccent,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           );
@@ -386,7 +394,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                       ),
                     ),
 
-                  const SizedBox(height: 100),
+                  SizedBox(height: 100.h),
                 ],
               ),
             ),
@@ -398,26 +406,26 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
 
   Widget _buildInfoChip(IconData icon, String text, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(20.scale),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
+            blurRadius: 8.scale,
           ),
         ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 6),
+          Icon(icon, size: 16.scale, color: color),
+          SizedBox(width: 6.w),
           Text(
             text,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 13.sp,
               fontWeight: FontWeight.w600,
               color: color,
             ),
@@ -433,17 +441,18 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
     required Color color,
     required Widget child,
   }) {
+    final isDarkMode = context.read<ThemeCubit>().isDarkMode;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(20.scale),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color ?? Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: isDarkMode ? const Color(0xFF1E2D4A) : Colors.white,
+        borderRadius: BorderRadius.circular(20.scale),
         boxShadow: [
           BoxShadow(
             color: color.withValues(alpha: 0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            blurRadius: 20.scale,
+            offset: Offset(0, 8.h),
           ),
         ],
       ),
@@ -453,19 +462,19 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: EdgeInsets.all(10.scale),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(12.scale),
                 ),
-                child: Icon(icon, color: color, size: 24),
+                child: Icon(icon, color: color, size: 24.scale),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12.w),
               Expanded(
                 child: Text(
                   title,
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 20.sp,
                     fontWeight: FontWeight.bold,
                     color: color,
                   ),
@@ -475,7 +484,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16.h),
           child,
         ],
       ),
@@ -487,27 +496,27 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
       onTap: () => _showAddIngredientsDialog(context),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 18),
+        padding: EdgeInsets.symmetric(vertical: 18.h),
         decoration: BoxDecoration(
           gradient: AppTheme.greenGradient,
-          borderRadius: BorderRadius.circular(30),
+          borderRadius: BorderRadius.circular(30.scale),
           boxShadow: [
             BoxShadow(
-              color: AppTheme.primaryGreen.withValues(alpha: 0.4),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
+              color: AppTheme.brandBlue.withValues(alpha: 0.4),
+              blurRadius: 20.scale,
+              offset: Offset(0, 8.h),
             ),
           ],
         ),
-        child: const Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add_shopping_cart, color: Colors.white, size: 24),
-            SizedBox(width: 12),
+            Icon(Icons.add_shopping_cart, color: Colors.white, size: 24.scale),
+            SizedBox(width: 12.w),
             Text(
               'เพิ่มวัตถุดิบลงรายการซื้อ',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 18.sp,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
@@ -562,7 +571,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
           height: MediaQuery.of(context).size.height * 0.85,
           decoration: BoxDecoration(
             color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(30.scale)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -570,43 +579,43 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
               // Handle bar
               Center(
                 child: Container(
-                  margin: const EdgeInsets.only(top: 12),
-                  width: 40,
-                  height: 4,
+                  margin: EdgeInsets.only(top: 12.h),
+                  width: 40.w,
+                  height: 4.h,
                   decoration: BoxDecoration(
                     color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
+                    borderRadius: BorderRadius.circular(2.scale),
                   ),
                 ),
               ),
               
               Padding(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                padding: EdgeInsets.fromLTRB(24.w, 24.h, 24.w, 0),
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(10),
+                      padding: EdgeInsets.all(10.scale),
                       decoration: BoxDecoration(
                         gradient: AppTheme.greenGradient,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(12.scale),
                       ),
-                      child: const Icon(Icons.shopping_basket, color: Colors.white),
+                      child: Icon(Icons.shopping_basket, color: Colors.white, size: 24.scale),
                     ),
-                    const SizedBox(width: 16),
-                    const Expanded(
+                    SizedBox(width: 16.w),
+                    Expanded(
                       child: Text(
                         'เลือกวัตถุดิบที่ต้องการ',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold, color: context.read<ThemeCubit>().isDarkMode ? Colors.white : Colors.black87),
                       ),
                     ),
                   ],
                 ),
               ),
               
-              const SizedBox(height: 8),
+              SizedBox(height: 8.h),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Text('ปรับเปลี่ยนจำนวนและหน่วยได้ตามต้องการ', style: TextStyle(color: Colors.grey[600])),
+                padding: EdgeInsets.symmetric(horizontal: 24.w),
+                child: Text('ปรับเปลี่ยนจำนวนและหน่วยได้ตามต้องการ', style: TextStyle(color: context.read<ThemeCubit>().isDarkMode ? Colors.white54 : Colors.grey[600], fontSize: 14.sp)),
               ),
 
               const Divider(height: 30),
@@ -623,27 +632,27 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                     final currentUnitId = unitIds[index] ?? ing.unitId;
                     
                     return Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      padding: const EdgeInsets.all(12),
+                      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                      padding: EdgeInsets.all(12.scale),
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(15),
+                        color: context.read<ThemeCubit>().isDarkMode ? const Color(0xFF1E2D4A) : Colors.white,
+                        borderRadius: BorderRadius.circular(15.scale),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.03),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
+                            blurRadius: 10.scale,
+                            offset: Offset(0, 4.h),
                           ),
                         ],
                         border: Border.all(
-                          color: isSelected ? AppTheme.primaryGreen.withOpacity(0.3) : Colors.transparent,
+                          color: isSelected ? AppTheme.brandBlue.withOpacity(0.3) : Colors.transparent,
                         ),
                       ),
                       child: Row(
                         children: [
                           Checkbox(
                             value: isSelected,
-                            activeColor: AppTheme.primaryGreen,
+                            activeColor: AppTheme.brandBlue,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                             onChanged: (val) {
                               setModalState(() {
@@ -655,7 +664,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                               });
                             },
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8.w),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -664,24 +673,26 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                                   ing.ingredientName,
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    color: isSelected ? Colors.black : Colors.grey[400],
+                                    fontSize: 16.sp,
+                                    color: isSelected 
+                                      ? (context.read<ThemeCubit>().isDarkMode ? Colors.white : Colors.black) 
+                                      : (context.read<ThemeCubit>().isDarkMode ? Colors.white30 : Colors.grey[400]),
                                   ),
                                 ),
-                                const SizedBox(height: 12),
+                                SizedBox(height: 12.h),
                                 Row(
                                   children: [
                                     // Quantity Stepper
                                     Container(
                                       decoration: BoxDecoration(
                                         color: Colors.grey[100],
-                                        borderRadius: BorderRadius.circular(8),
+                                        borderRadius: BorderRadius.circular(8.scale),
                                       ),
                                       child: Row(
                                         children: [
                                           IconButton(
                                             visualDensity: VisualDensity.compact,
-                                            icon: const Icon(Icons.remove, size: 16),
+                                            icon: Icon(Icons.remove, size: 16.scale),
                                             onPressed: !isSelected ? null : () {
                                                 if (currentQty > 0.5) {
                                                   setModalState(() => quantities[index] = currentQty - 0.5);
@@ -689,16 +700,16 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                                             },
                                           ),
                                           SizedBox(
-                                            width: 40,
+                                            width: 40.w,
                                             child: Text(
                                               currentQty.toStringAsFixed(currentQty.truncateToDouble() == currentQty ? 0 : 1),
                                               textAlign: TextAlign.center,
-                                              style: const TextStyle(fontWeight: FontWeight.bold),
+                                              style: TextStyle(fontWeight: FontWeight.bold, color: context.read<ThemeCubit>().isDarkMode ? Colors.black87 : Colors.black87, fontSize: 14.sp),
                                             ),
                                           ),
                                           IconButton(
                                             visualDensity: VisualDensity.compact,
-                                            icon: const Icon(Icons.add, size: 16),
+                                            icon: Icon(Icons.add, size: 16.scale),
                                             onPressed: !isSelected ? null : () {
                                                 setModalState(() => quantities[index] = currentQty + 0.5);
                                             },
@@ -706,20 +717,20 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                                         ],
                                       ),
                                     ),
-                                    const SizedBox(width: 12),
+                                    SizedBox(width: 12.w),
                                     // Unit Dropdown
                                     Expanded(
                                       child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                                        padding: EdgeInsets.symmetric(horizontal: 10.w),
                                         decoration: BoxDecoration(
                                           color: Colors.grey[100],
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius: BorderRadius.circular(8.scale),
                                         ),
                                         child: DropdownButtonHideUnderline(
                                           child: DropdownButton<int>(
                                             value: currentUnitId == 0 && allUnits.isNotEmpty ? allUnits.first.unitId : currentUnitId,
                                             isExpanded: true,
-                                            style: const TextStyle(fontSize: 14, color: Colors.black, fontWeight: FontWeight.w500),
+                                            style: TextStyle(fontSize: 14.sp, color: Colors.black, fontWeight: FontWeight.w500),
                                             items: allUnits.map((u) => DropdownMenuItem(
                                               value: u.unitId,
                                               child: Text(u.unitName),
@@ -747,14 +758,14 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
 
               // Action Button
               Container(
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.all(24.scale),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: context.read<ThemeCubit>().isDarkMode ? const Color(0xFF1E2D4A) : Colors.white,
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.05),
-                      offset: const Offset(0, -4),
-                      blurRadius: 10,
+                      offset: Offset(0, -4.h),
+                      blurRadius: 10.scale,
                     ),
                   ],
                 ),
@@ -783,16 +794,16 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                         _createShoppingListFromCustomSelection(customSelections);
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryOrange,
+                        backgroundColor: AppTheme.brandPurple,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                        padding: EdgeInsets.symmetric(vertical: 16.h),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15.scale)),
                         disabledBackgroundColor: Colors.grey[300],
                         elevation: 0,
                       ),
                       child: Text(
                         'สร้างรายการซื้อ (${selectedIndices.length})',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
@@ -826,21 +837,31 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
         if (success) {
            ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Row(
+              content: Row(
                 children: [
-                   Icon(Icons.check_circle, color: Colors.white),
-                   SizedBox(width: 12),
-                   Expanded(child: Text('สร้างรายการสั่งซื้อเรียบร้อยแล้ว!')),
+                   const Icon(Icons.check_circle, color: Colors.white),
+                   SizedBox(width: 12.w),
+                   const Expanded(
+                     child: Text(
+                       'สร้างรายการสั่งซื้อเรียบร้อยแล้ว!',
+                       style: TextStyle(fontWeight: FontWeight.bold),
+                     ),
+                   ),
                 ],
               ),
-              backgroundColor: AppTheme.primaryGreen,
+              backgroundColor: AppTheme.brandBlue,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              margin: EdgeInsets.fromLTRB(16.w, 0, 16.w, 100.h),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15.scale)),
+              duration: const Duration(seconds: 4),
               action: SnackBarAction(
                 label: 'ดูรายการ',
                 textColor: Colors.white,
                 onPressed: () {
-                   // Navigate to Shopping List Screen
+                  // Switch to Shopping List tab
+                  context.read<NavigationCubit>().setTab(2);
+                  // Pop back to main navigation
+                  Navigator.pop(context);
                 },
               ),
             ),
@@ -858,41 +879,44 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
   }
 
   Widget _buildIngredientRow(RecipeIngredientItem ing) {
+    final isDarkMode = context.read<ThemeCubit>().isDarkMode;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: EdgeInsets.symmetric(vertical: 6.h),
       child: Row(
         children: [
           Container(
-            width: 8,
-            height: 8,
+            width: 8.scale,
+            height: 8.scale,
             decoration: BoxDecoration(
-              color: ing.isMainIngredient ? AppTheme.primaryOrange : Colors.teal,
+              color: ing.isMainIngredient ? AppTheme.brandPurple : Colors.teal,
               shape: BoxShape.circle,
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12.w),
           Expanded(
             child: Text(
               ing.ingredientName,
               style: TextStyle(
-                fontSize: 16,
-                color: ing.isMainIngredient ? Colors.black : Colors.grey[800],
+                fontSize: 16.sp,
+                color: ing.isMainIngredient 
+                  ? (isDarkMode ? Colors.white : Colors.black) 
+                  : (isDarkMode ? Colors.white70 : Colors.grey[800]),
                 fontWeight: ing.isMainIngredient ? FontWeight.bold : FontWeight.w500,
               ),
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
             decoration: BoxDecoration(
-              color: Colors.teal.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+              color: isDarkMode ? Colors.teal.withValues(alpha: 0.2) : Colors.teal.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8.scale),
             ),
             child: Text(
               '${ing.quantity.toStringAsFixed(ing.quantity.truncateToDouble() == ing.quantity ? 0 : 1)} ${ing.unitName}',
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.teal,
-                fontWeight: FontWeight.w600,
+              style: TextStyle(
+                fontSize: 14.sp,
+                color: isDarkMode ? const Color(0xFF4DB6AC) : Colors.teal[700],
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),

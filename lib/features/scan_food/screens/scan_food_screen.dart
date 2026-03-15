@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/theme_cubit.dart';
+import '../../../core/utils/responsive_helper.dart';
 import '../../auth/cubit/auth_cubit.dart';
 import '../bloc/scan_food_cubit.dart';
 import 'scan_result_screen.dart';
@@ -60,22 +62,30 @@ class _ScanFoodViewState extends State<_ScanFoodView> {
   }
 
   void _showLoginPrompt(BuildContext context) {
+    final isDarkMode = context.read<ThemeCubit>().isDarkMode;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
+        backgroundColor: isDarkMode ? const Color(0xFF1E2D4A) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.scale)),
+        title: Row(
           children: [
-            Icon(Icons.lock_outline, color: AppTheme.primaryOrange),
-            SizedBox(width: 10),
-            Text('เข้าสู่ระบบก่อนใช้งาน'),
+            Icon(Icons.lock_outline, color: AppTheme.brandPurple, size: 24.scale),
+            SizedBox(width: 10.w),
+            Text(
+              'เข้าสู่ระบบก่อนใช้งาน',
+              style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87, fontSize: 18.sp),
+            ),
           ],
         ),
-        content: const Text('ฟังก์ชันสแกนอาหารและวัตถุดิบ\nจำเป็นต้องเข้าสู่ระบบก่อนเพื่อจัดเก็บข้อมูลและประมวลผลครับ 🍳'),
+        content: Text(
+          'ฟังก์ชันสแกนอาหารและวัตถุดิบ\nจำเป็นต้องเข้าสู่ระบบก่อนเพื่อจัดเก็บข้อมูลและประมวลผลครับ 🍳',
+          style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black54, fontSize: 14.sp),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('ไว้ทีหลัง', style: TextStyle(color: Colors.grey)),
+            child: Text('ไว้ทีหลัง', style: TextStyle(color: Colors.grey, fontSize: 14.sp)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -83,10 +93,11 @@ class _ScanFoodViewState extends State<_ScanFoodView> {
               context.read<AuthCubit>().signOut(); // Clear guest session and go to login
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryOrange,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              backgroundColor: AppTheme.brandPurple,
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.scale)),
             ),
-            child: const Text('เข้าสู่ระบบ', style: TextStyle(color: Colors.white)),
+            child: Text('เข้าสู่ระบบ', style: TextStyle(color: Colors.white, fontSize: 14.sp)),
           ),
         ],
       ),
@@ -95,13 +106,16 @@ class _ScanFoodViewState extends State<_ScanFoodView> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = context.watch<ThemeCubit>().isDarkMode;
+
     return Scaffold(
+      backgroundColor: isDarkMode ? const Color(0xFF1A1A2E) : const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Text('AI Scanner 📸'),
+        title: Text('AI Scanner 📸', style: TextStyle(fontSize: 20.sp)),
         centerTitle: true,
         flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: AppTheme.primaryGradient,
+          decoration: BoxDecoration(
+            gradient: isDarkMode ? AppTheme.brandGradientDark : AppTheme.brandGradient,
           ),
         ),
       ),
@@ -141,27 +155,32 @@ class _ScanFoodViewState extends State<_ScanFoodView> {
 
             showDialog(
               context: context,
-              builder: (context) => AlertDialog(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              builder: (context) {
+                final isDarkModeDialog = context.watch<ThemeCubit>().isDarkMode;
+                return AlertDialog(
+                  backgroundColor: isDarkModeDialog ? const Color(0xFF1E2D4A) : Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.scale)),
                 title: Row(
                   children: [
-                    Icon(icon, color: iconColor),
-                    const SizedBox(width: 10),
-                    Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    Icon(icon, color: iconColor, size: 24.scale),
+                    SizedBox(width: 10.w),
+                    Text(title, style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold, color: isDarkModeDialog ? Colors.white : Colors.black87)),
                   ],
                 ),
-                content: Text(message),
+                content: Text(message, style: TextStyle(color: isDarkModeDialog ? Colors.white70 : Colors.black54, fontSize: 14.sp)),
                 actions: [
                   ElevatedButton(
                     onPressed: () => Navigator.pop(context),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryOrange,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      backgroundColor: AppTheme.brandPurple,
+                      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.scale)),
                     ),
-                    child: const Text('ตกลง', style: TextStyle(color: Colors.white)),
+                    child: Text('ตกลง', style: TextStyle(color: Colors.white, fontSize: 14.sp)),
                   ),
                 ],
-              ),
+              );
+              },
             );
           }
         },
@@ -170,31 +189,31 @@ class _ScanFoodViewState extends State<_ScanFoodView> {
 
           return Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(24.scale),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (isAnalyzing) ...[
-                    const SizedBox(height: 100),
+                    SizedBox(height: 100.h),
                     const CircularProgressIndicator(),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24.h),
                     Text(
                       _isDishMode ? 'กำลังวิเคราะห์เมนูอาหาร...' : 'กำลังวิเคราะห์วัตถุดิบ...',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8.h),
                     Text(
                       'AI กำลังประมวลผลรูปภาพของคุณ',
-                      style: TextStyle(color: Colors.grey[600]),
+                      style: TextStyle(color: Colors.grey[600], fontSize: 14.sp),
                     ),
                   ] else ...[
                     // Selection Mode
                     Container(
-                      padding: const EdgeInsets.all(4),
+                      padding: EdgeInsets.all(4.scale),
                       decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(15),
+                        color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.grey[200],
+                        borderRadius: BorderRadius.circular(15.scale),
                       ),
                       child: Row(
                         children: [
@@ -203,6 +222,7 @@ class _ScanFoodViewState extends State<_ScanFoodView> {
                               label: 'ทายจากรูปอาหาร',
                               icon: Icons.restaurant,
                               isSelected: _isDishMode,
+                              isDarkMode: isDarkMode,
                               onTap: () => setState(() => _isDishMode = true),
                             ),
                           ),
@@ -211,27 +231,28 @@ class _ScanFoodViewState extends State<_ScanFoodView> {
                               label: 'แนะนำสูตรอาหาร',
                               icon: Icons.shopping_basket,
                               isSelected: !_isDishMode,
+                              isDarkMode: isDarkMode,
                               onTap: () => setState(() => _isDishMode = false),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    SizedBox(height: 32.h),
                     
                     // Preview Area
                     if (_image != null)
                       Container(
-                        height: 250,
+                        height: 250.h,
                         width: double.infinity,
-                        margin: const EdgeInsets.only(bottom: 32),
+                        margin: EdgeInsets.only(bottom: 32.h),
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(20.scale),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.1),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
+                              blurRadius: 20.scale,
+                              offset: Offset(0, 10.h),
                             ),
                           ],
                           image: DecorationImage(
@@ -242,34 +263,34 @@ class _ScanFoodViewState extends State<_ScanFoodView> {
                       )
                     else
                       Container(
-                        height: 160,
-                        margin: const EdgeInsets.only(bottom: 32),
+                        height: 160.h,
+                        margin: EdgeInsets.only(bottom: 32.h),
                         decoration: BoxDecoration(
-                          color: _isDishMode ? AppTheme.primaryOrange.withOpacity(0.05) : AppTheme.primaryGreen.withOpacity(0.05),
+                          color: (_isDishMode ? AppTheme.brandBlue : AppTheme.brandPurple).withOpacity(0.05),
                           shape: BoxShape.circle,
                         ),
                         child: Center(
                           child: Icon(
                             _isDishMode ? Icons.fastfood : Icons.kitchen,
-                            size: 70,
-                            color: _isDishMode ? AppTheme.primaryOrange.withOpacity(0.5) : AppTheme.primaryGreen.withOpacity(0.5),
+                            size: 70.scale,
+                            color: (_isDishMode ? AppTheme.brandBlue : AppTheme.brandPurple).withOpacity(0.5),
                           ),
                         ),
                       ),
             
                     Text(
                       _isDishMode ? 'คุณทานอะไรอยู่ครับ?' : 'มีวัตถุดิบอะไรบ้าง?',
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                      style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.bold, color: isDarkMode ? Colors.white : Colors.black87),
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12.h),
                     Text(
                       _isDishMode 
                         ? 'ให้ AI ช่วยทายว่าจานนี้คือเมนูอะไร\nคัดเลือกมาให้เพื่อให้คุณรู้ข้อมูล!'
                         : 'ถ่ายรูปวัตถุดิบในตู้เย็นหรือหน้าร้าน\nให้เราช่วยแนะนำเมนูที่น่าจะทำได้!',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 15, color: Colors.grey[600], height: 1.5),
+                      style: TextStyle(fontSize: 15.sp, color: Colors.grey[600], height: 1.5),
                     ),
-                    const SizedBox(height: 40),
+                    SizedBox(height: 40.h),
             
                     // Buttons
                     Row(
@@ -279,17 +300,19 @@ class _ScanFoodViewState extends State<_ScanFoodView> {
                             icon: Icons.photo_library_outlined,
                             label: 'อัลบั้ม',
                             onTap: () => _pickImage(context, ImageSource.gallery),
-                            color: Colors.grey[700]!,
+                            color: isDarkMode ? Colors.grey[400]! : Colors.grey[700]!,
+                            isDarkMode: isDarkMode,
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        SizedBox(width: 16.w),
                         Expanded(
                           child: _buildSmallActionButton(
                             icon: Icons.camera_alt,
                             label: 'ถ่ายรูป',
                             onTap: () => _pickImage(context, ImageSource.camera),
-                            color: _isDishMode ? AppTheme.primaryOrange : AppTheme.primaryGreen,
+                            color: _isDishMode ? AppTheme.brandBlue : AppTheme.brandPurple,
                             isPrimary: true,
+                            isDarkMode: isDarkMode,
                           ),
                         ),
                       ],
@@ -304,40 +327,44 @@ class _ScanFoodViewState extends State<_ScanFoodView> {
     );
   }
 
-  Widget _buildModeToggle({required String label, required IconData icon, required bool isSelected, required VoidCallback onTap}) {
+  Widget _buildModeToggle({required String label, required IconData icon, required bool isSelected, required VoidCallback onTap, required bool isDarkMode}) {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: EdgeInsets.symmetric(vertical: 12.h),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: isSelected ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))] : null,
+          color: isSelected ? (isDarkMode ? const Color(0xFF1E2D4A) : Colors.white) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12.scale),
+          boxShadow: isSelected ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4.scale, offset: Offset(0, 2.h))] : null,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 18, color: isSelected ? AppTheme.primaryOrange : Colors.grey),
-            const SizedBox(width: 8),
-            Text(label, style: TextStyle(fontSize: 14, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? Colors.black : Colors.grey)),
+            Icon(icon, size: 18.scale, color: isSelected ? (label == 'ทายจากรูปอาหาร' ? AppTheme.brandBlue : AppTheme.brandPurple) : Colors.grey),
+            SizedBox(width: 8.w),
+            Text(label, style: TextStyle(
+              fontSize: 14.sp, 
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, 
+              color: isSelected ? (isDarkMode ? Colors.white : Colors.black) : (isDarkMode ? Colors.white54 : Colors.grey)
+            )),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSmallActionButton({required IconData icon, required String label, required VoidCallback onTap, required Color color, bool isPrimary = false}) {
+  Widget _buildSmallActionButton({required IconData icon, required String label, required VoidCallback onTap, required Color color, bool isPrimary = false, required bool isDarkMode}) {
     return ElevatedButton.icon(
       onPressed: onTap,
-      icon: Icon(icon, size: 20),
-      label: Text(label),
+      icon: Icon(icon, size: 20.scale),
+      label: Text(label, style: TextStyle(fontSize: 14.sp)),
       style: ElevatedButton.styleFrom(
-        backgroundColor: isPrimary ? color : Colors.white,
+        backgroundColor: isPrimary ? color : (isDarkMode ? Colors.white.withOpacity(0.05) : Colors.white),
         foregroundColor: isPrimary ? Colors.white : color,
         elevation: isPrimary ? 4 : 0,
-        padding: const EdgeInsets.symmetric(vertical: 15),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: isPrimary ? BorderSide.none : BorderSide(color: color.withOpacity(0.2))),
+        padding: EdgeInsets.symmetric(vertical: 15.h),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.scale), side: isPrimary ? BorderSide.none : BorderSide(color: color.withOpacity(isDarkMode ? 0.3 : 0.2))),
       ),
     );
   }

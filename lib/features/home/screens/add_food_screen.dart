@@ -1,7 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../core/theme/theme_cubit.dart';
+import '../../../core/utils/responsive_helper.dart';
 import '../services/food_service.dart';
 import '../models/food_model.dart';
 
@@ -264,19 +267,20 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
   }
 
   Widget _buildIngredientRow(int index, Map<String, dynamic> item) {
+    final isDarkMode = context.read<ThemeCubit>().isDarkMode;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
+      padding: EdgeInsets.only(bottom: 12.0.h),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.all(12.scale),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          color: isDarkMode ? const Color(0xFF1E2D4A) : Colors.white,
+          borderRadius: BorderRadius.circular(12.scale),
           border: Border.all(color: item['main'] == true ? AppTheme.primaryOrange.withOpacity(0.3) : Colors.teal.withOpacity(0.2)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+              blurRadius: 4.scale,
+              offset: Offset(0, 2.h),
             ),
           ],
         ),
@@ -310,16 +314,16 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                           item['name'] = val;
                           item['id'] = 0;
                         },
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: 'ค้นหาวัตถุดิบ...',
-                          prefixIcon: Icon(Icons.search, size: 20),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 10),
-                          border: UnderlineInputBorder(),
+                          prefixIcon: Icon(Icons.search, size: 20.scale),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 10.w),
+                          border: const UnderlineInputBorder(),
                         ),
                       );
                     },
                 )),
-                const SizedBox(width: 8),
+                SizedBox(width: 8.w),
                 IconButton(
                   onPressed: () => _removeIngredient(index), 
                   icon: const Icon(Icons.delete_outline, color: Colors.red)
@@ -333,14 +337,15 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                     initialValue: item['qty'].toString(),
                     onChanged: (val) => item['qty'] = val,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(hintText: 'จำนวน', contentPadding: EdgeInsets.symmetric(horizontal: 10)),
+                    decoration: InputDecoration(hintText: 'จำนวน', contentPadding: EdgeInsets.symmetric(horizontal: 10.w), labelStyle: TextStyle(fontSize: 14.sp)),
+                    style: TextStyle(fontSize: 14.sp),
                 )),
-                const SizedBox(width: 8),
+                SizedBox(width: 8.w),
                 Expanded(flex: 2, child: DropdownButtonFormField<int>(
                     isExpanded: true,
                     value: item['unit_id'],
-                    decoration: const InputDecoration(hintText: 'หน่วย', contentPadding: EdgeInsets.symmetric(horizontal: 10)),
-                    items: _units.map((u) => DropdownMenuItem(value: u.unitId, child: Text(u.unitName, style: const TextStyle(fontSize: 14), overflow: TextOverflow.ellipsis))).toList(),
+                    decoration: InputDecoration(hintText: 'หน่วย', contentPadding: EdgeInsets.symmetric(horizontal: 10.w), labelStyle: TextStyle(fontSize: 14.sp)),
+                    items: _units.map((u) => DropdownMenuItem(value: u.unitId, child: Text(u.unitName, style: TextStyle(fontSize: 14.sp), overflow: TextOverflow.ellipsis))).toList(),
                     onChanged: (val) => setState(() => item['unit_id'] = val),
                     validator: (val) => val == null ? 'เลือก' : null,
                 )),
@@ -354,42 +359,54 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = context.watch<ThemeCubit>().isDarkMode;
     return Scaffold(
+      backgroundColor: isDarkMode ? const Color(0xFF1A1A2E) : const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Text('สร้างสูตรอาหาร 🍳'),
-        flexibleSpace: Container(decoration: const BoxDecoration(gradient: AppTheme.primaryGradient)),
+        toolbarHeight: 80.h,
+        title: Text('สร้างสูตรอาหาร 🍳', style: TextStyle(fontSize: 20.sp)),
+        centerTitle: true,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: AppTheme.brandGradient,
+          ),
+        ),
+        foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(20.scale),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Basic Info
-              const Text('ข้อมูลทั่วไป', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
+              Text('ข้อมูลทั่วไป', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
+              SizedBox(height: 16.h),
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: 'ชื่อเมนู', border: OutlineInputBorder(), prefixIcon: Icon(Icons.restaurant)),
+                decoration: InputDecoration(labelText: 'ชื่อเมนู', border: const OutlineInputBorder(), prefixIcon: Icon(Icons.restaurant, size: 24.scale), labelStyle: TextStyle(fontSize: 14.sp)),
+                style: TextStyle(fontSize: 16.sp),
                 validator: (v) => v!.isEmpty ? 'กรุณาระบุชื่อ' : null,
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12.h),
               TextFormField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(labelText: 'คำอธิบายสั้นๆ', border: OutlineInputBorder(), prefixIcon: Icon(Icons.description)),
+                decoration: InputDecoration(labelText: 'คำอธิบายสั้นๆ', border: const OutlineInputBorder(), prefixIcon: Icon(Icons.description, size: 24.scale), labelStyle: TextStyle(fontSize: 14.sp)),
+                style: TextStyle(fontSize: 16.sp),
                 maxLines: 2,
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12.h),
               TextFormField(
                 controller: _timeController,
-                decoration: const InputDecoration(labelText: 'เวลาปรุง (นาที)', border: OutlineInputBorder(), prefixIcon: Icon(Icons.timer)),
+                decoration: InputDecoration(labelText: 'เวลาปรุง (นาที)', border: const OutlineInputBorder(), prefixIcon: Icon(Icons.timer, size: 24.scale), labelStyle: TextStyle(fontSize: 14.sp)),
+                style: TextStyle(fontSize: 16.sp),
                 keyboardType: TextInputType.number,
                 validator: (v) => v!.isEmpty ? 'ระบุเวลา' : null,
               ),
               
               SwitchListTile(
-                title: const Text('เผยแพร่สาธารณะ'),
+                title: Text('เผยแพร่สาธารณะ', style: TextStyle(fontSize: 16.sp)),
                 value: _isPublic,
                 onChanged: (v) => setState(() => _isPublic = v),
               ),
@@ -398,15 +415,15 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
 
               // Categories Section
               if (_availableCategories.isNotEmpty) ...[
-                const Text('หมวดหมู่ (Categories)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 12),
+                Text('หมวดหมู่ (Categories)', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
+                SizedBox(height: 12.h),
                 Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+                  spacing: 8.w,
+                  runSpacing: 8.h,
                   children: _availableCategories.map((cat) {
                     final isSelected = _selectedCategoryIds.contains(cat.categoryId);
                     return FilterChip(
-                      label: Text(cat.categoryName),
+                      label: Text(cat.categoryName, style: TextStyle(fontSize: 14.sp)),
                       selected: isSelected,
                       selectedColor: AppTheme.primaryOrange.withOpacity(0.2),
                       checkmarkColor: AppTheme.primaryOrange,
@@ -422,20 +439,20 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                     );
                   }).toList(),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16.h),
               ],
 
               // Tags Section
               if (_availableTags.isNotEmpty) ...[
-                const Text('แท็ก (Tags)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 12),
+                Text('แท็ก (Tags)', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
+                SizedBox(height: 12.h),
                 Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+                  spacing: 8.w,
+                  runSpacing: 8.h,
                   children: _availableTags.map((tag) {
                     final isSelected = _selectedTagIds.contains(tag.tagId);
                     return FilterChip(
-                      label: Text('#${tag.tagName}'),
+                      label: Text('#${tag.tagName}', style: TextStyle(fontSize: 14.sp)),
                       selected: isSelected,
                       selectedColor: Colors.blueAccent.withOpacity(0.2),
                       checkmarkColor: Colors.blueAccent,
@@ -459,52 +476,53 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                Row(
                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                  children: [
-                    const Text('วัตถุดิบหลัก', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryOrange)),
-                    IconButton(onPressed: () => _addIngredient(isMain: true), icon: const Icon(Icons.add_circle, color: AppTheme.primaryOrange)),
+                    Text('วัตถุดิบหลัก', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold, color: isDarkMode ? Colors.white : AppTheme.primaryOrange)),
+                    IconButton(onPressed: () => _addIngredient(isMain: true), icon: Icon(Icons.add_circle, color: AppTheme.primaryOrange, size: 24.scale)),
                  ],
                ),
                ..._ingredients.asMap().entries.where((e) => e.value['main'] == true).map((entry) {
                    return _buildIngredientRow(entry.key, entry.value);
                }),
 
-               const SizedBox(height: 16),
+               SizedBox(height: 16.h),
                Row(
                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                  children: [
-                    const Text('วัตถุดิบย่อย / เครื่องปรุง', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal)),
-                    IconButton(onPressed: () => _addIngredient(isMain: false), icon: const Icon(Icons.add_circle, color: Colors.teal)),
+                    Text('วัตถุดิบย่อย / เครื่องปรุง', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold, color: isDarkMode ? Colors.white70 : Colors.teal)),
+                     IconButton(onPressed: () => _addIngredient(isMain: false), icon: Icon(Icons.add_circle, color: Colors.teal, size: 24.scale)),
+                  ],
+                ),
+                ..._ingredients.asMap().entries.where((e) => e.value['main'] != true).map((entry) {
+                    return _buildIngredientRow(entry.key, entry.value);
+                }),
+
+               const Divider(height: 40),
+
+               // Steps
+               Row(
+                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                 children: [
+                    Text('วิธีทำ 👨‍🍳', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
+                    IconButton(onPressed: _addStep, icon: Icon(Icons.add_circle, color: AppTheme.primaryGreen, size: 24.scale)),
                  ],
                ),
-               ..._ingredients.asMap().entries.where((e) => e.value['main'] != true).map((entry) {
-                   return _buildIngredientRow(entry.key, entry.value);
-               }),
-
-              const Divider(height: 40),
-
-              // Steps
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                   const Text('วิธีทำ 👨‍🍳', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                   IconButton(onPressed: _addStep, icon: const Icon(Icons.add_circle, color: AppTheme.primaryGreen)),
-                ],
-              ),
                ..._steps.asMap().entries.map((entry) {
                   int index = entry.key;
                   return Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
+                    padding: EdgeInsets.only(bottom: 8.0.h),
                     child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                            CircleAvatar(radius: 12, backgroundColor: AppTheme.primaryOrange, child: Text('${index+1}', style: const TextStyle(fontSize: 12, color: Colors.white))),
-                            const SizedBox(width: 12),
+                            CircleAvatar(radius: 12.scale, backgroundColor: AppTheme.primaryOrange, child: Text('${index+1}', style: TextStyle(fontSize: 12.sp, color: Colors.white))),
+                            SizedBox(width: 12.w),
                             Expanded(child: TextFormField(
                                 initialValue: entry.value,
                                 onChanged: (val) => _steps[index] = val,
                                 maxLines: 2,
-                                decoration: const InputDecoration(hintText: 'คำอธิบายขั้นตอน...', border: OutlineInputBorder()),
+                                style: TextStyle(fontSize: 14.sp),
+                                decoration: InputDecoration(hintText: 'คำอธิบายขั้นตอน...', border: const OutlineInputBorder(), contentPadding: EdgeInsets.all(12.scale), hintStyle: TextStyle(fontSize: 14.sp)),
                             )),
-                            IconButton(onPressed: () => _removeStep(index), icon: const Icon(Icons.remove_circle_outline, color: Colors.red)),
+                            IconButton(onPressed: () => _removeStep(index), icon: Icon(Icons.remove_circle_outline, color: Colors.red, size: 24.scale)),
                         ],
                     ),
                   );
@@ -517,11 +535,11 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                     showModalBottomSheet(context: context, builder: (_) => Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                            ListTile(leading: const Icon(Icons.camera), title: const Text('ถ่ายรูป'), onTap: () { Navigator.pop(context); _pickImage(ImageSource.camera); }),
-                            ListTile(leading: const Icon(Icons.photo), title: const Text('เลือกจากอัลบั้ม'), onTap: () { Navigator.pop(context); _pickImage(ImageSource.gallery); }),
+                            ListTile(leading: Icon(Icons.camera, size: 24.scale), title: Text('ถ่ายรูป', style: TextStyle(fontSize: 16.sp)), onTap: () { Navigator.pop(context); _pickImage(ImageSource.camera); }),
+                            ListTile(leading: Icon(Icons.photo, size: 24.scale), title: Text('เลือกจากอัลบั้ม', style: TextStyle(fontSize: 16.sp)), onTap: () { Navigator.pop(context); _pickImage(ImageSource.gallery); }),
                             ListTile(
-                              leading: const Icon(Icons.auto_awesome, color: AppTheme.primaryOrange), 
-                              title: const Text('สร้างรูปด้วย AI ✨', style: TextStyle(color: AppTheme.primaryOrange, fontWeight: FontWeight.bold)), 
+                              leading: Icon(Icons.auto_awesome, color: AppTheme.primaryOrange, size: 24.scale), 
+                              title: Text('สร้างรูปด้วย AI ✨', style: TextStyle(color: AppTheme.primaryOrange, fontWeight: FontWeight.bold, fontSize: 16.sp)), 
                               onTap: () { 
                                 Navigator.pop(context); 
                                 _generateImageWithAI(); 
@@ -531,12 +549,12 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                     ));
                 },
                 child: Container(
-                  height: 200,
+                  height: 200.h,
                   width: double.infinity,
                   clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(20),
+                    color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.grey[200],
+                    borderRadius: BorderRadius.circular(20.scale),
                   ),
                   child: Stack(
                     alignment: Alignment.center,
@@ -555,15 +573,15 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                           fit: BoxFit.cover,
                           width: double.infinity,
                           height: double.infinity,
-                          errorBuilder: (ctx, err, stack) => const Column(
+                          errorBuilder: (ctx, err, stack) => Column(
                             mainAxisAlignment: MainAxisAlignment.center,
-                            children: [Icon(Icons.broken_image, color: Colors.grey), Text('ไม่สามารถโหลดรูปภาพได้')],
+                            children: [Icon(Icons.broken_image, color: Colors.grey, size: 40.scale), Text('ไม่สามารถโหลดรูปภาพได้', style: TextStyle(fontSize: 14.sp))],
                           ),
                         ),
                       if (_selectedImage == null && _aiGeneratedUrl == null)
-                        const Column(
+                        Column(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children: [Icon(Icons.add_a_photo, size: 50, color: Colors.grey), SizedBox(height: 8), Text('เพิ่มรูปอาหาร')],
+                          children: [Icon(Icons.add_a_photo, size: 50.scale, color: Colors.grey), SizedBox(height: 8.h), Text('เพิ่มรูปอาหาร', style: TextStyle(fontSize: 16.sp, color: Colors.grey))],
                         ),
                       if (_isLoading)
                         Container(
@@ -575,14 +593,14 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                 ),
               ),
               
-              const SizedBox(height: 40),
+              SizedBox(height: 40.h),
               
               SizedBox(
-                height: 56,
+                height: 56.h,
                 child: ElevatedButton(
                     onPressed: _isLoading ? null : _submitpost,
-                    style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryOrange, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                    child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('บันทึกสูตรอาหาร', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryOrange, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.scale))),
+                    child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : Text('บันทึกสูตรอาหาร', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],

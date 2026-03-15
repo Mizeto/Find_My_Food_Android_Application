@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/theme_cubit.dart';
+import '../../../core/utils/responsive_helper.dart';
 import '../../../data/repositories/recipe_repository.dart';
 import '../../home/models/food_model.dart';
 import 'package:intl/intl.dart';
@@ -69,14 +71,14 @@ class _UserStockScreenState extends State<UserStockScreen> with SingleTickerProv
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('ลบวัตถุดิบ'),
-        content: Text('คุณต้องการลบ "${item.itemName}" ใช่หรือไม่?'),
+        title: Text('ลบวัตถุดิบ', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
+        content: Text('คุณต้องการลบ "${item.itemName}" ใช่หรือไม่?', style: TextStyle(fontSize: 16.sp)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('ยกเลิก')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('ยกเลิก', style: TextStyle(fontSize: 14.sp))),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('ลบ'),
+            child: Text('ลบ', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -89,7 +91,7 @@ class _UserStockScreenState extends State<UserStockScreen> with SingleTickerProv
         _loadAllStocks();
         if (mounted) {
            ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('ลบวัตถุดิบเรียบร้อยแล้ว')),
+            SnackBar(content: Text('ลบวัตถุดิบเรียบร้อยแล้ว', style: TextStyle(fontSize: 14.sp))),
           );
         }
       }
@@ -117,29 +119,36 @@ class _UserStockScreenState extends State<UserStockScreen> with SingleTickerProv
 
     showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(28),
-              color: Colors.white,
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
+      builder: (ctx) {
+        final isDarkMode = context.watch<ThemeCubit>().isDarkMode;
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) => Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28.scale)),
+            backgroundColor: isDarkMode ? const Color(0xFF1E2D4A) : Colors.white,
+            child: Container(
+              padding: EdgeInsets.all(24.scale),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(28.scale),
+                color: isDarkMode ? const Color(0xFF1E2D4A) : Colors.white,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
                    Text(
-                    item == null ? 'เพิ่มวัตถุดิบ 🥦' : 'แก้ไขวัตถุดิบ ✏️',
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
+                      item == null ? 'เพิ่มวัตถุดิบ 🥦' : 'แก้ไขวัตถุดิบ ✏️',
+                      style: TextStyle(
+                        fontSize: 24.sp, 
+                        fontWeight: FontWeight.bold,
+                        color: isDarkMode ? Colors.white : Colors.black87,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 24.h),
                   
-                  // Item Name Field with Autocomplete
-                  _buildLabel('ชื่อวัตถุดิบ'),
+                    // Item Name Field with Autocomplete
+                    _buildLabel('ชื่อวัตถุดิบ', isDarkMode),
                   Autocomplete<IngredientModel>(
                     optionsBuilder: (TextEditingValue textValue) async {
                       if (textValue.text.isEmpty) return const Iterable<IngredientModel>.empty();
@@ -177,10 +186,11 @@ class _UserStockScreenState extends State<UserStockScreen> with SingleTickerProv
                       return TextField(
                         controller: textController,
                         focusNode: focusNode,
-                        decoration: _buildInputDecoration(
-                          hintText: 'เช่น หมูสับ, ไข่ไก่',
-                          prefixIcon: Icons.shopping_basket_outlined,
-                        ),
+                          decoration: _buildInputDecoration(
+                            hintText: 'เช่น หมูสับ, ไข่ไก่',
+                            prefixIcon: Icons.shopping_basket_outlined,
+                            isDarkMode: isDarkMode,
+                          ),
                         enabled: item == null,
                         onChanged: (val) {
                           setDialogState(() {
@@ -191,7 +201,7 @@ class _UserStockScreenState extends State<UserStockScreen> with SingleTickerProv
                       );
                     },
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20.h),
                   
                   Row(
                     children: [
@@ -201,57 +211,60 @@ class _UserStockScreenState extends State<UserStockScreen> with SingleTickerProv
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildLabel('จำนวน'),
+                            _buildLabel('จำนวน', isDarkMode),
                             TextField(
                               controller: qtyCtrl,
                               keyboardType: TextInputType.number,
                               decoration: _buildInputDecoration(
                                 hintText: '0',
                                 prefixIcon: Icons.scale_outlined,
+                                isDarkMode: isDarkMode,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8.w),
                       // Unit selection
                       Expanded(
                         flex: 3,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildLabel('หน่วย'),
+                            _buildLabel('หน่วย', isDarkMode),
                             DropdownButtonFormField<int>(
                               value: selectedUnitId == 0 && _units.isNotEmpty ? _units.first.unitId : (selectedUnitId != 0 ? selectedUnitId : null),
                               isExpanded: true,
-                              decoration: _buildInputDecoration(
-                                prefixIcon: Icons.unfold_more_outlined,
-                              ),
+                                decoration: _buildInputDecoration(
+                                  prefixIcon: Icons.unfold_more_outlined,
+                                  isDarkMode: isDarkMode,
+                                ),
                               items: _units.map((u) => DropdownMenuItem(
                                 value: u.unitId,
-                                child: Text(u.unitName, style: const TextStyle(fontSize: 14)),
+                                child: Text(u.unitName, style: TextStyle(fontSize: 14.sp)),
                               )).toList(),
                               onChanged: (val) => setDialogState(() => selectedUnitId = val!),
-                              hint: const Text('เลือกหน่วย', style: TextStyle(fontSize: 14)),
+                              hint: Text('เลือกหน่วย', style: TextStyle(fontSize: 14.sp)),
                             ),
                           ],
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20.h),
                   
                   // Storage Location
-                  _buildLabel('ที่เก็บ'),
+                  _buildLabel('ที่เก็บ', isDarkMode),
                     DropdownButtonFormField<String>(
                       value: selectedLocation,
                       isExpanded: true,
-                      decoration: _buildInputDecoration(
-                        prefixIcon: Icons.place_outlined,
-                      ),
+                        decoration: _buildInputDecoration(
+                          prefixIcon: Icons.place_outlined,
+                          isDarkMode: isDarkMode,
+                        ),
                       items: _locations.map((loc) => DropdownMenuItem(
                         value: loc,
-                        child: Text(_locationDisplayNames[loc] ?? loc, style: const TextStyle(fontSize: 14)),
+                        child: Text(_locationDisplayNames[loc] ?? loc, style: TextStyle(fontSize: 14.sp)),
                       )).toList(),
                       onChanged: (val) async {
                         setDialogState(() => selectedLocation = val!);
@@ -276,21 +289,21 @@ class _UserStockScreenState extends State<UserStockScreen> with SingleTickerProv
                           }
                         }
                       },
-                      icon: const Icon(Icons.arrow_drop_down_circle_outlined, size: 20),
+                      icon: Icon(Icons.arrow_drop_down_circle_outlined, size: 20.scale),
                     ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20.h),
                   
                   // Expiry Date picker toggle
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildLabel('ระบุวันหมดอายุ'),
+                      _buildLabel('ระบุวันหมดอายุ', isDarkMode),
                       Transform.scale(
                         scale: 0.8,
                         child: Switch(
                           value: hasExpiryDate,
                           onChanged: (val) => setDialogState(() => hasExpiryDate = val),
-                          activeColor: AppTheme.primaryOrange,
+                          activeColor: AppTheme.brandPurple,
                         ),
                       ),
                     ],
@@ -309,7 +322,7 @@ class _UserStockScreenState extends State<UserStockScreen> with SingleTickerProv
                             return Theme(
                               data: Theme.of(context).copyWith(
                                 colorScheme: const ColorScheme.light(
-                                  primary: AppTheme.primaryOrange,
+                                  primary: AppTheme.brandPurple,
                                   onPrimary: Colors.white,
                                   onSurface: Colors.black,
                                 ),
@@ -321,39 +334,45 @@ class _UserStockScreenState extends State<UserStockScreen> with SingleTickerProv
                         if (picked != null) setDialogState(() => selectedDate = picked);
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: selectedDate == null && hasExpiryDate ? Colors.red.shade300 : Colors.grey.shade300),
-                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(16.scale),
+                          border: Border.all(
+                            color: selectedDate == null && hasExpiryDate 
+                                ? Colors.red.shade300 
+                                : (isDarkMode ? Colors.white24 : Colors.grey.shade300),
+                          ),
+                          color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.calendar_today_outlined, color: AppTheme.primaryOrange, size: 20),
-                            const SizedBox(width: 12),
-                            Text(
-                              selectedDate != null 
-                                ? DateFormat.yMMMd('th').format(selectedDate!)
-                                : 'เลือกวันที่',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: selectedDate != null ? Colors.black : Colors.grey.shade600,
+                            Icon(Icons.calendar_today_outlined, color: AppTheme.brandPurple, size: 20.scale),
+                            SizedBox(width: 12.w),
+                              Text(
+                                selectedDate != null 
+                                  ? DateFormat.yMMMd('th').format(selectedDate!)
+                                  : 'เลือกวันที่',
+                                style: TextStyle(
+                                  fontSize: 16.sp,
+                                  color: selectedDate != null 
+                                      ? (isDarkMode ? Colors.white : Colors.black) 
+                                      : (isDarkMode ? Colors.white54 : Colors.grey.shade600),
+                                ),
                               ),
-                            ),
                             const Spacer(),
-                            const Icon(Icons.edit_calendar_outlined, size: 18, color: Colors.grey),
+                            Icon(Icons.edit_calendar_outlined, size: 18.scale, color: Colors.grey),
                           ],
                         ),
                       ),
                     ),
                     if (selectedDate == null)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 4, left: 4),
-                        child: Text('กรุณาระบุวันหมดอายุ', style: TextStyle(color: Colors.red, fontSize: 12)),
+                      Padding(
+                        padding: EdgeInsets.only(top: 4.h, left: 4.w),
+                        child: Text('กรุณาระบุวันหมดอายุ', style: TextStyle(color: Colors.red, fontSize: 12.sp)),
                       ),
                   ],
                   
-                  const SizedBox(height: 32),
+                  SizedBox(height: 32.h),
                   
                   // Action Buttons
                   Row(
@@ -362,13 +381,13 @@ class _UserStockScreenState extends State<UserStockScreen> with SingleTickerProv
                         child: TextButton(
                           onPressed: () => Navigator.pop(ctx),
                           style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            padding: EdgeInsets.symmetric(vertical: 16.h),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.scale)),
                           ),
-                          child: const Text('ยกเลิก', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                          child: Text('ยกเลิก', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 16.sp)),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: 12.w),
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () async {
@@ -409,15 +428,15 @@ class _UserStockScreenState extends State<UserStockScreen> with SingleTickerProv
                             }
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryOrange,
+                            backgroundColor: AppTheme.brandPurple,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            padding: EdgeInsets.symmetric(vertical: 16.h),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.scale)),
                             elevation: 0,
                           ),
                           child: Text(
                             item == null ? 'เพิ่มวัตถุดิบ' : 'บันทึกการแก้ไข',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16.sp),
                           ),
                         ),
                       ),
@@ -428,60 +447,66 @@ class _UserStockScreenState extends State<UserStockScreen> with SingleTickerProv
             ),
           ),
         ),
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildLabel(String text) {
+  Widget _buildLabel(String text, bool isDarkMode) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0, left: 4),
+      padding: EdgeInsets.only(bottom: 8.h, left: 4.w),
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 14,
+          fontSize: 14.sp,
           fontWeight: FontWeight.bold,
-          color: Colors.grey.shade700,
+          color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700,
         ),
       ),
     );
   }
 
-  InputDecoration _buildInputDecoration({String? hintText, IconData? prefixIcon}) {
+  InputDecoration _buildInputDecoration({String? hintText, IconData? prefixIcon, bool isDarkMode = false}) {
     return InputDecoration(
       hintText: hintText,
-      prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: AppTheme.primaryOrange, size: 20) : null,
+      hintStyle: TextStyle(color: isDarkMode ? Colors.white38 : Colors.grey.shade400, fontSize: 14.sp),
+      prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: isDarkMode ? Colors.grey.shade400 : AppTheme.brandPurple, size: 20.scale) : null,
       filled: true,
-      fillColor: Colors.grey.shade50,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      fillColor: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
+      contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(16.scale),
+        borderSide: BorderSide(color: isDarkMode ? Colors.white24 : Colors.grey.shade300),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(16.scale),
+        borderSide: BorderSide(color: isDarkMode ? Colors.white24 : Colors.grey.shade300),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: AppTheme.primaryOrange, width: 2),
+        borderRadius: BorderRadius.circular(16.scale),
+        borderSide: const BorderSide(color: AppTheme.brandPurple, width: 2),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = context.watch<ThemeCubit>().isDarkMode;
     return Scaffold(
+      backgroundColor: isDarkMode ? const Color(0xFF1A1A2E) : const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Text('จัดการวัตถุดิบ 🧊'),
+        toolbarHeight: 70.h,
+        title: Text('จัดการวัตถุดิบ 🧊', style: TextStyle(fontSize: 20.sp)),
         flexibleSpace: Container(
-          decoration: const BoxDecoration(gradient: AppTheme.primaryGradient),
+          decoration: const BoxDecoration(gradient: AppTheme.brandGradient),
         ),
+        foregroundColor: Colors.white,
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,
           indicatorWeight: 3,
           labelColor: Colors.white,
-          unselectedLabelColor: Colors.white.withOpacity(0.6),
+          unselectedLabelColor: Colors.white.withOpacity(0.5),
           tabs: [
             Tab(text: _locationDisplayNames['pantry'], icon: const Icon(Icons.inventory_2)),
             Tab(text: _locationDisplayNames['fridge'], icon: const Icon(Icons.kitchen)),
@@ -497,13 +522,14 @@ class _UserStockScreenState extends State<UserStockScreen> with SingleTickerProv
           ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddDialog,
-        backgroundColor: AppTheme.primaryOrange,
-        child: const Icon(Icons.add, color: Colors.white),
+        backgroundColor: AppTheme.brandPurple,
+        child: Icon(Icons.add, color: Colors.white, size: 28.scale),
       ),
     );
   }
 
   Widget _buildStockList(String location) {
+    final isDarkMode = context.watch<ThemeCubit>().isDarkMode;
     final items = _stockByLocation[location] ?? [];
     
     if (items.isEmpty) {
@@ -511,9 +537,12 @@ class _UserStockScreenState extends State<UserStockScreen> with SingleTickerProv
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.inventory_outlined, size: 64, color: Colors.grey.withOpacity(0.5)),
-            const SizedBox(height: 16),
-            Text('ไม่มีวัตถุดิบใน ${_locationDisplayNames[location] ?? location}', style: const TextStyle(color: Colors.grey)),
+            Icon(Icons.inventory_outlined, size: 64.scale, color: isDarkMode ? Colors.white24 : Colors.grey.withOpacity(0.5)),
+            SizedBox(height: 16.h),
+            Text(
+              'ไม่มีวัตถุดิบใน ${_locationDisplayNames[location] ?? location}',
+              style: TextStyle(color: isDarkMode ? Colors.white54 : Colors.grey, fontSize: 14.sp),
+            ),
           ],
         ),
       );
@@ -522,56 +551,61 @@ class _UserStockScreenState extends State<UserStockScreen> with SingleTickerProv
     return RefreshIndicator(
       onRefresh: _loadAllStocks,
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16.scale),
         itemCount: items.length,
         itemBuilder: (context, index) {
           final item = items[index];
           final isExpired = item.expireDate != null && DateTime.parse(item.expireDate!).isBefore(DateTime.now());
 
           return Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            elevation: 2,
+            margin: EdgeInsets.only(bottom: 12.h),
+            color: isDarkMode ? const Color(0xFF1E2D4A) : Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.scale)),
+            elevation: isDarkMode ? 0 : 2,
             child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
               leading: Container(
-                padding: const EdgeInsets.all(12),
+                padding: EdgeInsets.all(12.scale),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryOrange.withOpacity(0.1),
+                  color: AppTheme.brandPurple.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Text(
                   _getEmojiForItem(item.itemName),
-                  style: const TextStyle(fontSize: 24),
+                  style: TextStyle(fontSize: 24.sp),
                 ),
               ),
               title: Text(
                 item.itemName,
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: TextStyle(fontWeight: FontWeight.bold, color: isDarkMode ? Colors.white : Colors.black87, fontSize: 16.sp),
               ),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                   Text('จำนวน: ${item.quantity} ${item.unitName ?? ""}'),
-                   if (item.expireDate != null && item.expireDate!.isNotEmpty)
-                     Text(
-                       'หมดอายุ: ${DateFormat('dd MMM yyyy').format(DateTime.parse(item.expireDate!))}',
-                       style: TextStyle(
-                         color: isExpired ? Colors.red : Colors.grey,
-                         fontWeight: isExpired ? FontWeight.bold : FontWeight.normal,
-                       ),
-                     ),
+                  Text(
+                    'จำนวน: ${item.quantity} ${item.unitName ?? ""}',
+                    style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black54, fontSize: 13.sp),
+                  ),
+                  if (item.expireDate != null && item.expireDate!.isNotEmpty)
+                    Text(
+                      'หมดอายุ: ${DateFormat('dd MMM yyyy').format(DateTime.parse(item.expireDate!))}',
+                      style: TextStyle(
+                        color: isExpired ? Colors.red : Colors.grey,
+                        fontWeight: isExpired ? FontWeight.bold : FontWeight.normal,
+                        fontSize: 12.sp,
+                      ),
+                    ),
                 ],
               ),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.edit_outlined, color: Colors.blue),
+                    icon: Icon(Icons.edit_outlined, color: Colors.blue, size: 20.scale),
                     onPressed: () => _showEditDialog(item),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    icon: Icon(Icons.delete_outline, color: Colors.red, size: 20.scale),
                     onPressed: () => _deleteItem(item),
                   ),
                 ],

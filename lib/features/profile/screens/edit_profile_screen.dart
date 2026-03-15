@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../auth/cubit/auth_cubit.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/theme_cubit.dart';
+import '../../../core/utils/responsive_helper.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -54,30 +56,30 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void _showImageSourceDialog() {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.scale)),
       ),
       builder: (context) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.all(20.scale),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
+              Text(
                 'เลือกรูปภาพ',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: 20.h),
               ListTile(
                 leading: Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: EdgeInsets.all(10.scale),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryOrange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
+                    color: AppTheme.brandPurple.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10.scale),
                   ),
-                  child: const Icon(Icons.camera_alt, color: AppTheme.primaryOrange),
+                  child: Icon(Icons.camera_alt, color: AppTheme.brandPurple, size: 24.scale),
                 ),
-                title: const Text('ถ่ายภาพ'),
+                title: Text('ถ่ายภาพ', style: TextStyle(fontSize: 16.sp)),
                 onTap: () {
                   Navigator.pop(context);
                   _pickImage(ImageSource.camera);
@@ -85,14 +87,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               ListTile(
                 leading: Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: EdgeInsets.all(10.scale),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryOrange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
+                    color: AppTheme.brandPurple.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10.scale),
                   ),
-                  child: const Icon(Icons.photo_library, color: AppTheme.primaryOrange),
+                  child: Icon(Icons.photo_library, color: AppTheme.brandPurple, size: 24.scale),
                 ),
-                title: const Text('เลือกจากแกลเลอรี'),
+                title: Text('เลือกจากแกลเลอรี', style: TextStyle(fontSize: 16.sp)),
                 onTap: () {
                   Navigator.pop(context);
                   _pickImage(ImageSource.gallery);
@@ -151,37 +153,37 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             padding: EdgeInsets.only(
               bottom: MediaQuery.of(ctx).viewInsets.bottom,
             ),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24.scale)),
             ),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+              padding: EdgeInsets.fromLTRB(24.w, 20.h, 24.w, 24.h),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // Drag handle
                   Container(
-                    width: 40,
-                    height: 4,
+                    width: 40.w,
+                    height: 4.h,
                     decoration: BoxDecoration(
                       color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(2),
+                      borderRadius: BorderRadius.circular(2.scale),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20.h),
                   // Header
-                  const Row(
+                  Row(
                     children: [
-                      Icon(Icons.lock_reset, color: Color(0xFFFF6B35), size: 28),
-                      SizedBox(width: 12),
+                      Icon(Icons.lock_reset, color: const Color(0xFFFF6B35), size: 28.scale),
+                      SizedBox(width: 12.w),
                       Text(
                         'เปลี่ยนรหัสผ่าน',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: 24.h),
                   // Old password
                   TextField(
                     controller: oldPassController,
@@ -189,15 +191,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     enabled: !isLoading,
                     decoration: InputDecoration(
                       labelText: 'รหัสผ่านเดิม',
-                      prefixIcon: const Icon(Icons.lock_outline),
+                      prefixIcon: Icon(Icons.lock_outline, size: 24.scale),
                       suffixIcon: IconButton(
-                        icon: Icon(isOldVisible ? Icons.visibility : Icons.visibility_off),
+                        icon: Icon(isOldVisible ? Icons.visibility : Icons.visibility_off, size: 24.scale),
                         onPressed: () => setModalState(() => isOldVisible = !isOldVisible),
                       ),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.scale)),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16.h),
                   // New password
                   TextField(
                     controller: newPassController,
@@ -205,15 +207,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     enabled: !isLoading,
                     decoration: InputDecoration(
                       labelText: 'รหัสผ่านใหม่',
-                      prefixIcon: const Icon(Icons.lock_outline),
+                      prefixIcon: Icon(Icons.lock_outline, size: 24.scale),
                       suffixIcon: IconButton(
-                        icon: Icon(isNewVisible ? Icons.visibility : Icons.visibility_off),
+                        icon: Icon(isNewVisible ? Icons.visibility : Icons.visibility_off, size: 24.scale),
                         onPressed: () => setModalState(() => isNewVisible = !isNewVisible),
                       ),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.scale)),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16.h),
                   // Confirm password
                   TextField(
                     controller: confirmPassController,
@@ -221,15 +223,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     enabled: !isLoading,
                     decoration: InputDecoration(
                       labelText: 'ยืนยันรหัสผ่านใหม่',
-                      prefixIcon: const Icon(Icons.lock_outline),
+                      prefixIcon: Icon(Icons.lock_outline, size: 24.scale),
                       suffixIcon: IconButton(
-                        icon: Icon(isConfirmVisible ? Icons.visibility : Icons.visibility_off),
+                        icon: Icon(isConfirmVisible ? Icons.visibility : Icons.visibility_off, size: 24.scale),
                         onPressed: () => setModalState(() => isConfirmVisible = !isConfirmVisible),
                       ),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.scale)),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: 24.h),
                   // Submit button
                   SizedBox(
                     width: double.infinity,
@@ -241,16 +243,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               if (newPassController.text != confirmPassController.text) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: const Row(
+                                    content: Row(
                                       children: [
-                                        Icon(Icons.error_outline, color: Colors.white),
-                                        SizedBox(width: 12),
-                                        Text('รหัสผ่านใหม่ไม่ตรงกัน'),
+                                        Icon(Icons.error_outline, color: Colors.white, size: 24.scale),
+                                        SizedBox(width: 12.w),
+                                        Text('รหัสผ่านใหม่ไม่ตรงกัน', style: TextStyle(fontSize: 14.sp)),
                                       ],
                                     ),
                                     backgroundColor: Colors.red,
                                     behavior: SnackBarBehavior.floating,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.scale)),
                                   ),
                                 );
                                 return;
@@ -260,16 +262,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                   confirmPassController.text.isEmpty) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: const Row(
+                                    content: Row(
                                       children: [
-                                        Icon(Icons.error_outline, color: Colors.white),
-                                        SizedBox(width: 12),
-                                        Text('กรุณากรอกข้อมูลให้ครบ'),
+                                        Icon(Icons.error_outline, color: Colors.white, size: 24.scale),
+                                        SizedBox(width: 12.w),
+                                        Text('กรุณากรอกข้อมูลให้ครบ', style: TextStyle(fontSize: 14.sp)),
                                       ],
                                     ),
                                     backgroundColor: Colors.red,
                                     behavior: SnackBarBehavior.floating,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.scale)),
                                   ),
                                 );
                                 return;
@@ -285,19 +287,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         backgroundColor: const Color(0xFFFF6B35),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(12.scale),
                         ),
                       ),
                       child: isLoading
-                          ? const SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: CircularProgressIndicator(
+                          ? SizedBox(
+                              height: 24.scale,
+                              width: 24.scale,
+                              child: const CircularProgressIndicator(
                                 color: Colors.white,
                                 strokeWidth: 2,
                               ),
                             )
-                          : const Text('เปลี่ยนรหัสผ่าน', style: TextStyle(fontSize: 16)),
+                          : Text('เปลี่ยนรหัสผ่าน', style: TextStyle(fontSize: 16.sp)),
                     ),
                   ),
                 ],
@@ -313,9 +315,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('แก้ไขข้อมูลส่วนตัว'),
+        toolbarHeight: 80.h,
+        title: Text('แก้ไขข้อมูลส่วนตัว', style: TextStyle(fontSize: 20.sp)),
         centerTitle: true,
-        backgroundColor: AppTheme.primaryOrange,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: AppTheme.brandGradient,
+          ),
+        ),
         foregroundColor: Colors.white,
       ),
       body: BlocConsumer<AuthCubit, AuthState>(
@@ -344,7 +351,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           final user = state.user;
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(24.scale),
             child: Column(
               children: [
                 // Profile Image
@@ -354,16 +361,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     GestureDetector(
                       onTap: _isUploading ? null : _showImageSourceDialog,
                       child: Container(
-                        width: 120,
-                        height: 120,
+                        width: 120.scale,
+                        height: 120.scale,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          gradient: AppTheme.primaryGradient,
+                          gradient: AppTheme.brandGradient,
                           boxShadow: [
                             BoxShadow(
-                              color: AppTheme.primaryOrange.withOpacity(0.3),
-                              blurRadius: 15,
-                              offset: const Offset(0, 5),
+                              color: AppTheme.brandPurple.withOpacity(0.3),
+                              blurRadius: 15.scale,
+                              offset: Offset(0, 5.h),
                             ),
                           ],
                         ),
@@ -376,8 +383,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                     child: Image.network(
                                       user.profileImage!,
                                       fit: BoxFit.cover,
-                                      width: 120,
-                                      height: 120,
+                                      width: 120.scale,
+                                      height: 120.scale,
                                       errorBuilder: (_, __, ___) => _buildDefaultAvatar(user),
                                     ),
                                   )
@@ -385,39 +392,36 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: EdgeInsets.all(8.scale),
                       decoration: const BoxDecoration(
-                        color: AppTheme.primaryOrange,
+                        color: AppTheme.brandPurple,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.camera_alt,
                         color: Colors.white,
-                        size: 20,
+                        size: 20.scale,
                       ),
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 16),
-
+                SizedBox(height: 16.h),
                 Text(
                   'กดที่รูปเพื่อเปลี่ยนรูปภาพของคุณ',
                   style: TextStyle(
                     color: Colors.grey[600],
-                    fontSize: 14,
+                    fontSize: 14.sp,
                   ),
                 ),
-
-                const SizedBox(height: 32),
+                SizedBox(height: 32.h),
 
                 // User Info Card
                 Card(
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(16.scale),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(20),
+                    padding: EdgeInsets.all(20.scale),
                     child: Column(
                       children: [
                         _InfoRow(
@@ -426,7 +430,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           value: user.username,
                           onEdit: () => _showEditUsernameDialog(user.username),
                         ),
-                        const Divider(height: 24),
+                        Divider(height: 24.h),
                         _InfoRow(
                           icon: Icons.email,
                           label: 'อีเมล',
@@ -438,19 +442,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 24),
+                SizedBox(height: 24.h),
 
                 // Change Password Button
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: _showChangePasswordDialog,
-                    icon: const Icon(Icons.lock_reset),
-                    label: const Text('เปลี่ยนรหัสผ่าน'),
+                    icon: Icon(Icons.lock_reset, size: 20.scale),
+                    label: Text('เปลี่ยนรหัสผ่าน', style: TextStyle(fontSize: 16.sp)),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      padding: EdgeInsets.symmetric(vertical: 14.h),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(12.scale),
                       ),
                     ),
                   ),
@@ -469,8 +473,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         user.username.isNotEmpty == true
             ? user.username.substring(0, 1).toUpperCase()
             : '👤',
-        style: const TextStyle(
-          fontSize: 48,
+        style: TextStyle(
+          fontSize: 48.sp,
           color: Colors.white,
           fontWeight: FontWeight.bold,
         ),
@@ -494,17 +498,19 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = context.watch<ThemeCubit>().isDarkMode;
+
     return Row(
       children: [
         Container(
-          padding: const EdgeInsets.all(10),
+          padding: EdgeInsets.all(10.scale),
           decoration: BoxDecoration(
-            color: AppTheme.primaryOrange.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
+            color: AppTheme.brandPurple.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10.scale),
           ),
-          child: Icon(icon, color: AppTheme.primaryOrange),
+          child: Icon(icon, color: AppTheme.brandPurple, size: 24.scale),
         ),
-        const SizedBox(width: 16),
+        SizedBox(width: 16.w),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -512,16 +518,17 @@ class _InfoRow extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
+                  fontSize: 12.sp,
+                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                 ),
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: 4.h),
               Text(
                 value,
-                style: const TextStyle(
-                  fontSize: 16,
+                style: TextStyle(
+                  fontSize: 16.sp,
                   fontWeight: FontWeight.w500,
+                  color: isDarkMode ? Colors.white : Colors.black87,
                 ),
               ),
             ],
@@ -529,7 +536,7 @@ class _InfoRow extends StatelessWidget {
         ),
         if (onEdit != null)
            IconButton(
-            icon: const Icon(Icons.edit, size: 20, color: Colors.grey), 
+            icon: Icon(Icons.edit, size: 20.scale, color: Colors.grey), 
             onPressed: onEdit,
            ),
       ],

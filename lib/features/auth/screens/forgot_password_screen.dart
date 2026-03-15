@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/responsive_helper.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -45,7 +47,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ),
         backgroundColor: Colors.red,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -61,9 +63,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             Expanded(child: Text(msg)),
           ],
         ),
-        backgroundColor: Colors.green,
+        backgroundColor: AppTheme.brandBlue,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -128,7 +130,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           barrierDismissible: false,
           builder: (ctx) => AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            icon: const Icon(Icons.check_circle, color: Colors.green, size: 64),
+            icon: const Icon(Icons.check_circle, color: AppTheme.brandBlue, size: 64),
             title: const Text('สำเร็จ!'),
             content: const Text('เปลี่ยนรหัสผ่านเรียบร้อยแล้ว\nกรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่'),
             actions: [
@@ -137,7 +139,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   Navigator.pop(ctx);
                   Navigator.pop(context);
                 },
-                child: const Text('ไปหน้าเข้าสู่ระบบ'),
+                child: Text('ไปหน้าเข้าสู่ระบบ', style: TextStyle(color: AppTheme.brandPurple, fontSize: 14.sp)),
               ),
             ],
           ),
@@ -156,116 +158,179 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
   }
 
+  InputDecoration _inputDecoration({
+    required String label,
+    required IconData prefixIcon,
+    Widget? suffix,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: TextStyle(color: Colors.grey[500]),
+      prefixIcon: Icon(prefixIcon, color: Colors.grey[400]),
+      suffixIcon: suffix,
+      filled: true,
+      fillColor: const Color(0xFFF8F8FA),
+      contentPadding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 18.h),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16.scale),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16.scale),
+        borderSide: BorderSide(color: Colors.grey.shade200),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16.scale),
+        borderSide: const BorderSide(color: AppTheme.brandBlue, width: 1.5),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final steps = ['อีเมล', 'OTP', 'รหัสผ่านใหม่'];
 
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFFF6B35), Color(0xFFFF8E53), Color(0xFFFFD93D)],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // App bar
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-                      onPressed: () {
-                        if (_currentStep > 0) {
-                          _goToStep(_currentStep - 1);
-                        } else {
-                          Navigator.pop(context);
-                        }
-                      },
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Top bar
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.arrow_back_ios, color: const Color(0xFF2D2D3A), size: 20.scale),
+                    onPressed: () {
+                      if (_currentStep > 0) {
+                        _goToStep(_currentStep - 1);
+                      } else {
+                        Navigator.pop(context);
+                      }
+                    },
+                  ),
+                  Text(
+                    'Forget Password',
+                    style: TextStyle(
+                      fontSize: 20.sp,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF2D2D3A),
                     ),
-                    const Text(
-                      'ลืมรหัสผ่าน',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
+            ),
 
-              // Step indicator
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                child: Row(
-                  children: List.generate(steps.length, (i) {
-                    final isActive = i <= _currentStep;
-                    return Expanded(
-                      child: Row(
-                        children: [
-                          if (i > 0)
-                            Expanded(
-                              child: Container(
-                                height: 2,
-                                color: isActive ? Colors.white : Colors.white38,
+            // Step indicator
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 32.w, vertical: 12.h),
+              child: Row(
+                children: List.generate(steps.length * 2 - 1, (i) {
+                  // Even index = circle, odd index = line
+                  if (i.isEven) {
+                    final stepIndex = i ~/ 2;
+                    final isActive = stepIndex <= _currentStep;
+                    return Container(
+                      width: 32.scale,
+                      height: 32.scale,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: isActive ? AppTheme.brandGradient : null,
+                        color: isActive ? null : Colors.grey[200],
+                      ),
+                      child: Center(
+                        child: stepIndex < _currentStep
+                            ? Icon(Icons.check, size: 18.scale, color: Colors.white)
+                            : Text(
+                                '${stepIndex + 1}',
+                                style: TextStyle(
+                                  color: isActive ? Colors.white : Colors.grey[500],
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14.sp,
+                                ),
                               ),
-                            ),
-                          Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: isActive ? Colors.white : Colors.white38,
-                            ),
-                            child: Center(
-                              child: i < _currentStep
-                                  ? const Icon(Icons.check, size: 18, color: Color(0xFFFF6B35))
-                                  : Text(
-                                      '${i + 1}',
-                                      style: TextStyle(
-                                        color: isActive ? const Color(0xFFFF6B35) : Colors.white70,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                            ),
-                          ),
-                        ],
                       ),
                     );
-                  }),
-                ),
+                  } else {
+                    final lineAfterStep = (i + 1) ~/ 2;
+                    final isActive = lineAfterStep <= _currentStep;
+                    return Expanded(
+                      child: Container(
+                        height: 2.h,
+                        margin: EdgeInsets.symmetric(horizontal: 4.w),
+                        color: isActive ? AppTheme.brandPurple : Colors.grey[300],
+                      ),
+                    );
+                  }
+                }),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: steps
-                      .map((s) => Text(s, style: const TextStyle(color: Colors.white70, fontSize: 12)))
-                      .toList(),
-                ),
+            ),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24.w),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: steps
+                    .map((s) => Text(s, style: TextStyle(color: Colors.grey[500], fontSize: 12.sp)))
+                    .toList(),
               ),
+            ),
 
-              const SizedBox(height: 24),
+            SizedBox(height: 24.h),
 
-              // Page content
-              Expanded(
-                child: PageView(
-                  controller: _pageController,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    _buildEmailStep(),
-                    _buildOTPStep(),
-                    _buildResetStep(),
-                  ],
-                ),
+            // Page content
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  _buildEmailStep(),
+                  _buildOTPStep(),
+                  _buildResetStep(),
+                ],
               ),
-            ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGradientButton({
+    required String label,
+    required VoidCallback? onPressed,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      height: 56.h,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: AppTheme.brandGradient,
+          borderRadius: BorderRadius.circular(16.scale),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.brandPurple.withOpacity(0.3),
+              blurRadius: 16.scale,
+              offset: Offset(0, 6.h),
+            ),
+          ],
+        ),
+        child: ElevatedButton(
+          onPressed: onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            shadowColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16.scale),
+            ),
           ),
+          child: _isLoading
+              ? SizedBox(
+                  height: 24.scale,
+                  width: 24.scale,
+                  child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                )
+              : Text(label, style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold, color: Colors.white)),
         ),
       ),
     );
@@ -274,66 +339,39 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   // ──────────── Step 1: Email ────────────
   Widget _buildEmailStep() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Card(
-        color: Colors.white.withOpacity(0.92),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Center(
-                child: Icon(Icons.email_outlined, size: 64, color: Color(0xFFFF6B35)),
-              ),
-              const SizedBox(height: 16),
-              const Center(
-                child: Text(
-                  'กรอกอีเมลของคุณ',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Center(
-                child: Text(
-                  'เราจะส่งรหัส OTP ไปยังอีเมลของคุณ',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                ),
-              ),
-              const SizedBox(height: 24),
-              TextFormField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                enabled: !_isLoading,
-                decoration: InputDecoration(
-                  labelText: 'อีเมล',
-                  prefixIcon: const Icon(Icons.email_outlined),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _requestOTP,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF6B35),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                        )
-                      : const Text('ส่ง OTP', style: TextStyle(fontSize: 16)),
-                ),
-              ),
-            ],
+      padding: EdgeInsets.symmetric(horizontal: 32.w),
+      child: Column(
+        children: [
+          SizedBox(height: 20.h),
+          Container(
+            padding: EdgeInsets.all(20.scale),
+            decoration: BoxDecoration(
+              gradient: AppTheme.brandGradient,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.email_outlined, size: 48.scale, color: Colors.white),
           ),
-        ),
+          SizedBox(height: 24.h),
+          Text(
+            'กรอกอีเมลของคุณ',
+            style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.bold, color: const Color(0xFF2D2D3A)),
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            'เราจะส่งรหัส OTP ไปยังอีเมลของคุณ',
+            style: TextStyle(color: Colors.grey[500], fontSize: 14.sp),
+          ),
+          SizedBox(height: 28.h),
+          TextFormField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            enabled: !_isLoading,
+            style: TextStyle(fontSize: 16.sp),
+            decoration: _inputDecoration(label: 'Email', prefixIcon: Icons.email_outlined),
+          ),
+          SizedBox(height: 24.h),
+          _buildGradientButton(label: 'ส่ง OTP', onPressed: _isLoading ? null : _requestOTP),
+        ],
       ),
     );
   }
@@ -341,76 +379,46 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   // ──────────── Step 2: OTP ────────────
   Widget _buildOTPStep() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Card(
-        color: Colors.white.withOpacity(0.92),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Center(
-                child: Icon(Icons.lock_clock, size: 64, color: Color(0xFFFF6B35)),
-              ),
-              const SizedBox(height: 16),
-              const Center(
-                child: Text(
-                  'กรอกรหัส OTP',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Center(
-                child: Text(
-                  'รหัสถูกส่งไปที่ ${_emailController.text}',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              const SizedBox(height: 24),
-              TextFormField(
-                controller: _otpController,
-                keyboardType: TextInputType.number,
-                enabled: !_isLoading,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.bold),
-                decoration: InputDecoration(
-                  labelText: 'OTP',
-                  prefixIcon: const Icon(Icons.pin_outlined),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Center(
-                child: TextButton(
-                  onPressed: _isLoading ? null : _requestOTP,
-                  child: const Text('ส่ง OTP อีกครั้ง', style: TextStyle(color: Color(0xFFFF6B35))),
-                ),
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _verifyOTP,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF6B35),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                        )
-                      : const Text('ยืนยัน OTP', style: TextStyle(fontSize: 16)),
-                ),
-              ),
-            ],
+      padding: EdgeInsets.symmetric(horizontal: 32.w),
+      child: Column(
+        children: [
+          SizedBox(height: 20.h),
+          Container(
+            padding: EdgeInsets.all(20.scale),
+            decoration: BoxDecoration(
+              gradient: AppTheme.brandGradient,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.lock_clock, size: 48.scale, color: Colors.white),
           ),
-        ),
+          SizedBox(height: 24.h),
+          Text(
+            'กรอกรหัส OTP',
+            style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.bold, color: const Color(0xFF2D2D3A)),
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            'รหัสถูกส่งไปที่ ${_emailController.text}',
+            style: TextStyle(color: Colors.grey[500], fontSize: 14.sp),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 28.h),
+          TextFormField(
+            controller: _otpController,
+            keyboardType: TextInputType.number,
+            enabled: !_isLoading,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 24.sp, letterSpacing: 8, fontWeight: FontWeight.bold),
+            decoration: _inputDecoration(label: 'OTP', prefixIcon: Icons.pin_outlined),
+          ),
+          SizedBox(height: 12.h),
+          TextButton(
+            onPressed: _isLoading ? null : _requestOTP,
+            child: Text('ส่ง OTP อีกครั้ง', style: TextStyle(color: AppTheme.brandPurple, fontSize: 14.sp)),
+          ),
+          SizedBox(height: 12.h),
+          _buildGradientButton(label: 'ยืนยัน OTP', onPressed: _isLoading ? null : _verifyOTP),
+        ],
       ),
     );
   }
@@ -418,78 +426,56 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   // ──────────── Step 3: New Password ────────────
   Widget _buildResetStep() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Card(
-        color: Colors.white.withOpacity(0.92),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Center(
-                child: Icon(Icons.lock_reset, size: 64, color: Color(0xFFFF6B35)),
-              ),
-              const SizedBox(height: 16),
-              const Center(
-                child: Text(
-                  'ตั้งรหัสผ่านใหม่',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(height: 24),
-              TextFormField(
-                controller: _newPasswordController,
-                obscureText: !_isPasswordVisible,
-                enabled: !_isLoading,
-                decoration: InputDecoration(
-                  labelText: 'รหัสผ่านใหม่',
-                  prefixIcon: const Icon(Icons.lock_outline),
-                  suffixIcon: IconButton(
-                    icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off),
-                    onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
-                  ),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _confirmPasswordController,
-                obscureText: !_isConfirmPasswordVisible,
-                enabled: !_isLoading,
-                decoration: InputDecoration(
-                  labelText: 'ยืนยันรหัสผ่านใหม่',
-                  prefixIcon: const Icon(Icons.lock_outline),
-                  suffixIcon: IconButton(
-                    icon: Icon(_isConfirmPasswordVisible ? Icons.visibility : Icons.visibility_off),
-                    onPressed: () => setState(() => _isConfirmPasswordVisible = !_isConfirmPasswordVisible),
-                  ),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _resetPassword,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF6B35),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                        )
-                      : const Text('เปลี่ยนรหัสผ่าน', style: TextStyle(fontSize: 16)),
-                ),
-              ),
-            ],
+      padding: EdgeInsets.symmetric(horizontal: 32.w),
+      child: Column(
+        children: [
+          SizedBox(height: 20.h),
+          Container(
+            padding: EdgeInsets.all(20.scale),
+            decoration: BoxDecoration(
+              gradient: AppTheme.brandGradient,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.lock_reset, size: 48.scale, color: Colors.white),
           ),
-        ),
+          SizedBox(height: 24.h),
+          Text(
+            'ตั้งรหัสผ่านใหม่',
+            style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.bold, color: const Color(0xFF2D2D3A)),
+          ),
+          SizedBox(height: 28.h),
+          TextFormField(
+            controller: _newPasswordController,
+            obscureText: !_isPasswordVisible,
+            enabled: !_isLoading,
+            style: TextStyle(fontSize: 16.sp),
+            decoration: _inputDecoration(
+              label: 'รหัสผ่านใหม่',
+              prefixIcon: Icons.lock_outline,
+              suffix: IconButton(
+                icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off, color: Colors.grey[400], size: 20.scale),
+                onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+              ),
+            ),
+          ),
+          SizedBox(height: 16.h),
+          TextFormField(
+            controller: _confirmPasswordController,
+            obscureText: !_isConfirmPasswordVisible,
+            enabled: !_isLoading,
+            style: TextStyle(fontSize: 16.sp),
+            decoration: _inputDecoration(
+              label: 'ยืนยันรหัสผ่านใหม่',
+              prefixIcon: Icons.lock_outline,
+              suffix: IconButton(
+                icon: Icon(_isConfirmPasswordVisible ? Icons.visibility : Icons.visibility_off, color: Colors.grey[400], size: 20.scale),
+                onPressed: () => setState(() => _isConfirmPasswordVisible = !_isConfirmPasswordVisible),
+              ),
+            ),
+          ),
+          SizedBox(height: 24.h),
+          _buildGradientButton(label: 'เปลี่ยนรหัสผ่าน', onPressed: _isLoading ? null : _resetPassword),
+        ],
       ),
     );
   }

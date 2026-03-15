@@ -7,33 +7,39 @@ class NotificationService {
   final AuthService _authService = AuthService();
 
   Future<void> initialize() async {
-    // 1. Request Permission
-    NotificationSettings settings = await _messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+    try {
+      // 1. Request Permission
+      NotificationSettings settings = await _messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
 
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      if (kDebugMode) {
-        print('🔔 User granted notification permission');
+      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+        if (kDebugMode) {
+          print('🔔 User granted notification permission');
+        }
+        
+        // 2. Initial sync if already logged in
+        await syncToken();
+      } else {
+        if (kDebugMode) {
+          print('🔔 User declined or has not accepted notification permission');
+        }
       }
-      
-      // 2. Initial sync if already logged in
-      await syncToken();
-    } else {
+
+      // 3. Listen for token refresh
+      FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
+        if (kDebugMode) {
+          print('🔔 FCM Token Refreshed: $newToken');
+        }
+        await _authService.updateFCMToken(newToken);
+      });
+    } catch (e) {
       if (kDebugMode) {
-        print('🔔 User declined or has not accepted notification permission');
+        print('🔔 NotificationService initialization failed: $e');
       }
     }
-
-    // 3. Listen for token refresh
-    FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
-      if (kDebugMode) {
-        print('🔔 FCM Token Refreshed: $newToken');
-      }
-      await _authService.updateFCMToken(newToken);
-    });
   }
 
   Future<void> syncToken() async {

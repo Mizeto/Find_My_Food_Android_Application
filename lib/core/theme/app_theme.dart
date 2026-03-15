@@ -19,6 +19,21 @@ class AppTheme {
     end: Alignment.bottomRight,
   );
 
+  static const LinearGradient brandGradient = LinearGradient(
+    colors: [Color(0xFF4776E6), Color(0xFF8E54E2)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const LinearGradient brandGradientDark = LinearGradient(
+    colors: [Color(0xFF3254A3), Color(0xFF6A3FA9)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const Color brandBlue = Color(0xFF4776E6);
+  static const Color brandPurple = Color(0xFF8E54E2);
+
   // Light Theme
   static ThemeData lightTheme = ThemeData(
     useMaterial3: true,
@@ -38,7 +53,8 @@ class AppTheme {
       foregroundColor: Colors.white,
     ),
     cardTheme: CardThemeData(
-      elevation: 8,
+      elevation: 2,
+      color: Colors.white,
       shadowColor: const Color(0x1A000000),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     ),
@@ -86,7 +102,7 @@ class AppTheme {
       foregroundColor: Colors.white,
     ),
     cardTheme: CardThemeData(
-      elevation: 8,
+      elevation: 2,
       color: const Color(0xFF16213E),
       shadowColor: const Color(0x4D000000),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/responsive_helper.dart';
 import '../../../data/repositories/recipe_repository.dart';
 import '../../../data/models/recipe_model.dart';
 import '../../home/widgets/recipe_card.dart';
@@ -52,25 +53,35 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      backgroundColor: isDarkMode ? const Color(0xFF1A1A2E) : const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Text(
+        toolbarHeight: 80.h,
+        title: Text(
           'สูตรอาหารของฉัน',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            fontSize: 20.sp,
+          ),
         ),
-        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: AppTheme.brandGradient,
+          ),
+        ),
         elevation: 0,
-        foregroundColor: isDarkMode ? Colors.white : Colors.black87,
+        foregroundColor: Colors.white,
         centerTitle: true,
       ),
       body: RefreshIndicator(
         onRefresh: _loadMyRecipes,
-        color: AppTheme.primaryOrange,
-        child: _buildContent(),
+        color: AppTheme.brandPurple,
+        child: _buildContent(isDarkMode),
       ),
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(bool isDarkMode) {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -80,13 +91,17 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 60, color: Colors.red),
-            const SizedBox(height: 16),
-            Text('เกิดข้อผิดพลาด: $_error'),
-            const SizedBox(height: 16),
+            Icon(Icons.error_outline, size: 60.scale, color: Colors.red),
+            SizedBox(height: 16.h),
+            Text('เกิดข้อผิดพลาด: $_error', style: TextStyle(fontSize: 14.sp)),
+            SizedBox(height: 16.h),
             ElevatedButton(
               onPressed: _loadMyRecipes,
-              child: const Text('ลองใหม่'),
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.scale)),
+              ),
+              child: Text('ลองใหม่', style: TextStyle(fontSize: 14.sp)),
             ),
           ],
         ),
@@ -99,30 +114,33 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(24.scale),
               decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.1),
+                color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.restaurant_menu,
-                size: 80,
-                color: Colors.grey,
+                size: 80.scale,
+                color: isDarkMode ? Colors.grey[400] : Colors.grey,
               ),
             ),
-            const SizedBox(height: 24),
-            const Text(
+            SizedBox(height: 24.h),
+            Text(
               'ยังไม่มีสูตรอาหารที่คุณสร้าง',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 18.sp,
                 fontWeight: FontWeight.bold,
-                color: Colors.grey,
+                color: isDarkMode ? Colors.grey[400] : Colors.grey,
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8.h),
             Text(
               'เริ่มสร้างสูตรอาหารแสนอร่อยของคุณได้เลย!',
-              style: TextStyle(color: Colors.grey[600]),
+              style: TextStyle(
+                color: isDarkMode ? Colors.grey[500] : Colors.grey[600],
+                fontSize: 14.sp,
+              ),
             ),
           ],
         ),
@@ -130,7 +148,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16.scale),
       itemCount: _recipes!.length,
       itemBuilder: (context, index) {
         final recipe = _recipes![index];

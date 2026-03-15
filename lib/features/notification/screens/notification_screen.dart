@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../bloc/notification_bloc.dart';
 import '../../../data/models/notification_model.dart';
+import '../../../core/utils/responsive_helper.dart';
 
 class NotificationScreen extends StatelessWidget {
   const NotificationScreen({super.key});
@@ -13,50 +14,45 @@ class NotificationScreen extends StatelessWidget {
     return Scaffold(
       body: BlocBuilder<NotificationBloc, NotificationState>(
         builder: (context, state) {
-          return CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              // Premium AppBar
-              SliverAppBar(
-                expandedHeight: 120,
-                pinned: true,
-                stretch: true,
-                flexibleSpace: FlexibleSpaceBar(
-                  stretchModes: const [StretchMode.zoomBackground],
+          return RefreshIndicator(
+            onRefresh: () async {
+              context.read<NotificationBloc>().add(FetchNotifications());
+            },
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                // Premium AppBar
+                SliverAppBar(
+                  toolbarHeight: 80.h,
+                  pinned: true,
+                  stretch: true,
                   centerTitle: true,
-                  title: const Text(
+                  title: Text(
                     'การแจ้งเตือน',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 20,
+                      fontSize: 20.sp,
                       color: Colors.white,
                     ),
                   ),
-                  background: Container(
-                    decoration: const BoxDecoration(
-                      gradient: AppTheme.primaryGradient,
+                  flexibleSpace: FlexibleSpaceBar(
+                    stretchModes: const [StretchMode.zoomBackground],
+                    background: Container(
+                      decoration: const BoxDecoration(
+                        gradient: AppTheme.brandGradient,
+                      ),
                     ),
                   ),
+                  leading: IconButton(
+                    icon: Icon(Icons.arrow_back_ios, color: Colors.white, size: 20.scale),
+                    onPressed: () => Navigator.pop(context),
+                  ),
                 ),
-                leading: IconButton(
-                  icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                actions: [
-                  if (state is NotificationLoaded && state.unreadCount > 0)
-                    IconButton(
-                      icon: const Icon(Icons.done_all, color: Colors.white),
-                      tooltip: 'อ่านทั้งหมด',
-                      onPressed: () {
-                        context.read<NotificationBloc>().add(const MarkNotificationAsRead());
-                      },
-                    ),
-                ],
-              ),
-
-              // Content
-              _buildBody(context, state),
-            ],
+  
+                // Content
+                _buildBody(context, state),
+              ],
+            ),
           );
         },
       ),
@@ -76,9 +72,9 @@ class NotificationScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 60, color: Colors.red),
-              const SizedBox(height: 16),
-              Text('เกิดข้อผิดพลาด: ${state.message}'),
+              Icon(Icons.error_outline, size: 60.scale, color: Colors.red),
+              SizedBox(height: 16.h),
+              Text('เกิดข้อผิดพลาด: ${state.message}', style: TextStyle(fontSize: 14.sp)),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () {
@@ -102,30 +98,30 @@ class NotificationScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(24),
+                  padding: EdgeInsets.all(24.scale),
                   decoration: BoxDecoration(
                     color: Colors.grey.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.notifications_off_outlined,
-                    size: 80,
+                    size: 80.scale,
                     color: Colors.grey.withOpacity(0.5),
                   ),
                 ),
-                const SizedBox(height: 24),
-                const Text(
+                SizedBox(height: 24.h),
+                Text(
                   'ไม่มีการแจ้งเตือนในขณะนี้',
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 20.sp,
                     fontWeight: FontWeight.bold,
                     color: Colors.grey,
                   ),
                 ),
-                const SizedBox(height: 8),
-                const Text(
+                SizedBox(height: 8.h),
+                Text(
                   'เราจะแจ้งให้คุณทราบเมื่อมีข่าวสารใหม่ๆ',
-                  style: TextStyle(color: Colors.grey),
+                  style: TextStyle(color: Colors.grey, fontSize: 14.sp),
                 ),
               ],
             ),
@@ -146,13 +142,13 @@ class NotificationScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+                  padding: EdgeInsets.fromLTRB(20.w, 24.h, 20.w, 12.h),
                   child: Text(
                     key,
-                    style: const TextStyle(
-                      fontSize: 16,
+                    style: TextStyle(
+                      fontSize: 16.sp,
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryOrange,
+                      color: AppTheme.brandPurple,
                     ),
                   ),
                 ),
@@ -202,23 +198,23 @@ class _NotificationItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(16.scale),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            blurRadius: 10.scale,
+            offset: Offset(0, 4.h),
           ),
         ],
         border: notification.isRead 
           ? null 
-          : Border.all(color: AppTheme.primaryOrange.withOpacity(0.2), width: 1),
+          : Border.all(color: AppTheme.brandPurple.withOpacity(0.2), width: 1.w),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(16.scale),
         child: InkWell(
           onTap: () {
             if (!notification.isRead) {
@@ -235,18 +231,18 @@ class _NotificationItemCard extends StatelessWidget {
                   left: 0,
                   top: 0,
                   bottom: 0,
-                  width: 4,
-                  child: Container(color: AppTheme.primaryOrange),
+                  width: 4.w,
+                  child: Container(color: AppTheme.brandPurple),
                 ),
               
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(16.scale),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Icon with background
                     Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: EdgeInsets.all(12.scale),
                       decoration: BoxDecoration(
                         color: _getIconColor(notification.type).withValues(alpha: 0.1),
                         shape: BoxShape.circle,
@@ -254,10 +250,10 @@ class _NotificationItemCard extends StatelessWidget {
                       child: Icon(
                         _getIcon(notification.type),
                         color: _getIconColor(notification.type),
-                        size: 24,
+                        size: 24.scale,
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    SizedBox(width: 16.w),
                     // Content
                     Expanded(
                       child: Column(
@@ -271,7 +267,7 @@ class _NotificationItemCard extends StatelessWidget {
                                 child: Text(
                                   notification.title,
                                   style: TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 16.sp,
                                     fontWeight: notification.isRead
                                         ? FontWeight.w600
                                         : FontWeight.bold,
@@ -279,21 +275,21 @@ class _NotificationItemCard extends StatelessWidget {
                                   softWrap: true,
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              SizedBox(width: 12.w),
                               Text(
                                 notification.timeAgo,
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 12.sp,
                                   color: Colors.grey[500],
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 6),
+                          SizedBox(height: 6.h),
                           Text(
                             notification.message,
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: 14.sp,
                               color: notification.isRead 
                                 ? Colors.grey[600] 
                                 : Theme.of(context).textTheme.bodyMedium?.color,
@@ -308,17 +304,17 @@ class _NotificationItemCard extends StatelessWidget {
                     
                     if (!notification.isRead)
                       Container(
-                        margin: const EdgeInsets.only(left: 8, top: 4),
-                        width: 10,
-                        height: 10,
-                        decoration: const BoxDecoration(
-                          color: AppTheme.primaryOrange,
+                        margin: EdgeInsets.only(left: 8.w, top: 4.h),
+                        width: 10.scale,
+                        height: 10.scale,
+                        decoration: BoxDecoration(
+                          color: AppTheme.brandPurple,
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
                               color: Colors.orange,
-                              blurRadius: 4,
-                              spreadRadius: 1,
+                              blurRadius: 4.scale,
+                              spreadRadius: 1.scale,
                             ),
                           ],
                         ),
@@ -355,7 +351,7 @@ class _NotificationItemCard extends StatelessWidget {
       case 'success':
         return Colors.green;
       default:
-        return AppTheme.primaryOrange;
+        return AppTheme.brandPurple;
     }
   }
 }
