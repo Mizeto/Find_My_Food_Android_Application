@@ -359,13 +359,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
 
                   SizedBox(height: 20.h),
 
-                  // Add to Shopping List Button
-                  _buildAddToShoppingListButton(context),
-
-                  SizedBox(height: 20.h),
-
                   // Tags Section
-                  if (displayRecipe.tags != null && displayRecipe.tags!.isNotEmpty)
+                  if (displayRecipe.tags != null && displayRecipe.tags!.isNotEmpty) ...[
                     _buildSectionCard(
                       icon: Icons.local_offer,
                       title: 'แท็ก 🏷️',
@@ -393,6 +388,11 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                         }).toList(),
                       ),
                     ),
+                    SizedBox(height: 20.h),
+                  ],
+
+                  // Add to Shopping List Button
+                  _buildAddToShoppingListButton(context),
 
                   SizedBox(height: 100.h),
                 ],

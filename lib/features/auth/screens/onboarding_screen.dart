@@ -124,9 +124,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                   ),
                                 ],
                               ),
-                              child: Text(
-                                '🍳',
-                                style: TextStyle(fontSize: 72.sp),
+                              child: ClipOval(
+                                child: Image.asset(
+                                  AppTheme.logo,
+                                  width: 90.scale,
+                                  height: 90.scale,
+                                  fit: BoxFit.contain,
+                                ),
                               ),
                             ),
                             SizedBox(height: 40.h),

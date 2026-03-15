@@ -5,7 +5,7 @@ import '../../auth/models/user_model.dart';
 import '../../../data/models/recipe_model.dart';
 
 class UserService {
-  static const String baseUrl = 'http://45.91.134.142';
+  static final String baseUrl = 'http://45.91.134.142';
 
   Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();

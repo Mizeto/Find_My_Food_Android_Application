@@ -58,6 +58,28 @@ class _UserStockScreenState extends State<UserStockScreen> with SingleTickerProv
     try {
       for (var loc in _locations) {
         final items = await repo.getUserStockByStorage(loc);
+        
+        // Sort items by expiration date
+        items.sort((a, b) {
+          // Both have dates
+          if (a.expireDate != null && a.expireDate!.isNotEmpty && 
+              b.expireDate != null && b.expireDate!.isNotEmpty) {
+            final dateA = DateTime.parse(a.expireDate!);
+            final dateB = DateTime.parse(b.expireDate!);
+            return dateA.compareTo(dateB);
+          }
+          // A has date, B doesn't -> A comes first
+          if (a.expireDate != null && a.expireDate!.isNotEmpty) {
+            return -1;
+          }
+          // B has date, A doesn't -> B comes first
+          if (b.expireDate != null && b.expireDate!.isNotEmpty) {
+            return 1;
+          }
+          // Neither has date
+          return 0;
+        });
+
         _stockByLocation[loc] = items;
       }
     } catch (e) {

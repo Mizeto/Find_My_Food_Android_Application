@@ -17,6 +17,7 @@ class HomeLoaded extends HomeState {
   final int? selectedCategoryId;
   final List<int> selectedFilterCategoryIds;
   final List<int> selectedFilterTagIds;
+  final String searchQuery;
 
   HomeLoaded({
     required this.recipes,
@@ -26,6 +27,7 @@ class HomeLoaded extends HomeState {
     this.selectedCategoryId,
     this.selectedFilterCategoryIds = const [],
     this.selectedFilterTagIds = const [],
+    this.searchQuery = '',
   });
 
   @override
@@ -37,6 +39,7 @@ class HomeLoaded extends HomeState {
     selectedCategoryId ?? -1,
     selectedFilterCategoryIds,
     selectedFilterTagIds,
+    searchQuery,
   ];
 
   HomeLoaded copyWith({
@@ -47,6 +50,7 @@ class HomeLoaded extends HomeState {
     int? Function()? selectedCategoryId,
     List<int>? selectedFilterCategoryIds,
     List<int>? selectedFilterTagIds,
+    String? searchQuery,
   }) {
     return HomeLoaded(
       recipes: recipes ?? this.recipes,
@@ -58,6 +62,7 @@ class HomeLoaded extends HomeState {
           : this.selectedCategoryId,
       selectedFilterCategoryIds: selectedFilterCategoryIds ?? this.selectedFilterCategoryIds,
       selectedFilterTagIds: selectedFilterTagIds ?? this.selectedFilterTagIds,
+      searchQuery: searchQuery ?? this.searchQuery,
     );
   }
 }

@@ -22,7 +22,7 @@ class ScanFoodCubit extends Cubit<ScanFoodState> {
         final dishResult = await _recipeService.predictDishAI(image.path);
         
         if (dishResult == null) {
-          emit(const ScanFoodError('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้'));
+          emit(const ScanFoodError('ไม่พบวัตถุในรูปภาพ'));
           return;
         }
         
@@ -40,7 +40,7 @@ class ScanFoodCubit extends Cubit<ScanFoodState> {
         final result = await _recipeService.analyzeIngredientImage(image.path);
 
         if (result == null) {
-          emit(const ScanFoodError('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้'));
+          emit(const ScanFoodError('ไม่พบวัตถุในรูปภาพ'));
           return;
         }
 
@@ -56,8 +56,7 @@ class ScanFoodCubit extends Cubit<ScanFoodState> {
       }
 
     } catch (e) {
-      final errorMsg = e.toString().replaceFirst('Exception: ', '');
-      emit(ScanFoodError(errorMsg));
+      emit(const ScanFoodError('ไม่พบวัตถุในรูปภาพ'));
     }
   }
 }

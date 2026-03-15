@@ -89,11 +89,16 @@ class ScanResultScreen extends StatelessWidget {
                         child: Column(
                           children: [
                             SizedBox(height: 40.h),
-                            Icon(Icons.sentiment_dissatisfied, size: 80.scale, color: Colors.grey),
+                            Image.asset(
+                              'assets/images/food_illustration.png',
+                              height: 120.h,
+                              fit: BoxFit.contain,
+                              opacity: const AlwaysStoppedAnimation(0.6), // Dimmed for "no results"
+                            ),
                             SizedBox(height: 16.h),
                             Text(
                               'ไม่พบสูตรอาหารที่เหมาะสม 😅',
-                              style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold, color: Colors.grey),
+                              style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold, color: Colors.grey),
                             ),
                           ],
                         ),

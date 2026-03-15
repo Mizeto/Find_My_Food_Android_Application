@@ -84,6 +84,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
           recommendedFromStock: prevRecommendedFromStock,
           selectedFilterCategoryIds: prevFilterCatIds,
           selectedFilterTagIds: prevFilterTagIds,
+          searchQuery: event.query,
         ));
       } catch (e) {
         emit(HomeError(e.toString()));
@@ -126,6 +127,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
           recommendedFromStock: currentState.recommendedFromStock,
           categories: categories,
           selectedCategoryId: event.categoryId,
+          searchQuery: '', // Reset search when picking a category
         ));
       } catch (e) {
         emit(HomeError(e.toString()));
@@ -152,6 +154,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
           recommendedFromStock: prevRecommendedFromStock,
           selectedFilterCategoryIds: event.categoryIds,
           selectedFilterTagIds: event.tagIds,
+          searchQuery: '', // Filters reset text search
         ));
       } catch (e) {
         emit(HomeError(e.toString()));

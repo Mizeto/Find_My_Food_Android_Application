@@ -347,13 +347,14 @@ class _ProfileMenu extends StatelessWidget {
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) {
+          final isDarkMode = context.read<ThemeCubit>().isDarkMode;
           return Container(
             padding: EdgeInsets.only(
               bottom: MediaQuery.of(ctx).viewInsets.bottom,
             ),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            decoration: BoxDecoration(
+              color: isDarkMode ? const Color(0xFF1E1E2E) : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             ),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
@@ -366,7 +367,7 @@ class _ProfileMenu extends StatelessWidget {
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.grey[300],
+                        color: isDarkMode ? Colors.white24 : Colors.grey[300],
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -376,15 +377,21 @@ class _ProfileMenu extends StatelessWidget {
                     children: [
                       Icon(
                         Icons.feedback_outlined,
-                        color: const Color(0xFFFF6B35),
+                        color: AppTheme.brandBlue,
                         size: 28.scale,
                       ),
                       SizedBox(width: 12.w),
-                      Text(
-                        'ส่งข้อเสนอแนะ',
-                        style: TextStyle(
-                          fontSize: 20.sp,
-                          fontWeight: FontWeight.bold,
+                      ShaderMask(
+                        shaderCallback: (bounds) => AppTheme.brandGradient.createShader(
+                          Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+                        ),
+                        child: Text(
+                          'ส่งข้อเสนอแนะ',
+                          style: TextStyle(
+                            fontSize: 20.sp,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white, // Required for ShaderMask to show colors
+                          ),
                         ),
                       ),
                     ],
@@ -393,11 +400,17 @@ class _ProfileMenu extends StatelessWidget {
                   TextField(
                     controller: titleCtrl,
                     enabled: !isSending,
+                    style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87),
                     decoration: InputDecoration(
                       labelText: 'หัวข้อ',
-                      prefixIcon: Icon(Icons.title, size: 24.scale),
+                      labelStyle: TextStyle(color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+                      prefixIcon: Icon(Icons.title, size: 24.scale, color: AppTheme.brandBlue),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12.scale),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.scale),
+                        borderSide: const BorderSide(color: AppTheme.brandBlue, width: 2),
                       ),
                     ),
                   ),
@@ -406,105 +419,122 @@ class _ProfileMenu extends StatelessWidget {
                     controller: detailCtrl,
                     enabled: !isSending,
                     maxLines: 4,
+                    style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87),
                     decoration: InputDecoration(
                       labelText: 'รายละเอียด',
+                      labelStyle: TextStyle(color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
                       alignLabelWithHint: true,
                       prefixIcon: Padding(
                         padding: EdgeInsets.only(bottom: 52.h),
-                        child: Icon(Icons.description_outlined, size: 24.scale),
+                        child: Icon(Icons.description_outlined, size: 24.scale, color: AppTheme.brandBlue),
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12.scale),
                       ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.scale),
+                        borderSide: const BorderSide(color: AppTheme.brandBlue, width: 2),
+                      ),
                     ),
                   ),
                   SizedBox(height: 24.h),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: isSending
-                          ? null
-                          : () async {
-                              final title = titleCtrl.text.trim();
-                              final detail = detailCtrl.text.trim();
-                              if (title.isEmpty || detail.isEmpty) {
+                  GestureDetector(
+                    onTap: isSending
+                        ? null
+                        : () async {
+                            final title = titleCtrl.text.trim();
+                            final detail = detailCtrl.text.trim();
+                            if (title.isEmpty || detail.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'กรุณากรอกหัวข้อและรายละเอียด',
+                                  ),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+                            setModalState(() => isSending = true);
+                            try {
+                              final ok = await AuthService().submitFeedback(
+                                title: title,
+                                detail: detail,
+                              );
+                              if (ctx.mounted) Navigator.pop(ctx);
+                              if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'กรุณากรอกหัวข้อและรายละเอียด',
+                                  SnackBar(
+                                    content: Row(
+                                      children: [
+                                        Icon(
+                                          ok
+                                              ? Icons.check_circle
+                                              : Icons.error_outline,
+                                          color: Colors.white,
+                                          size: 24.scale,
+                                        ),
+                                        SizedBox(width: 12.w),
+                                        Text(
+                                          ok
+                                              ? 'ส่งข้อเสนอแนะเรียบร้อยแล้ว ขอบคุณ!'
+                                              : 'ส่งข้อเสนอแนะไม่สำเร็จ',
+                                          style: TextStyle(fontSize: 14.sp),
+                                        ),
+                                      ],
                                     ),
+                                    backgroundColor: ok
+                                        ? Colors.green
+                                        : Colors.red,
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              setModalState(() => isSending = false);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('เกิดข้อผิดพลาด: $e'),
                                     backgroundColor: Colors.red,
                                   ),
                                 );
-                                return;
                               }
-                              setModalState(() => isSending = true);
-                              try {
-                                final ok = await AuthService().submitFeedback(
-                                  title: title,
-                                  detail: detail,
-                                );
-                                if (ctx.mounted) Navigator.pop(ctx);
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Row(
-                                        children: [
-                                          Icon(
-                                            ok
-                                                ? Icons.check_circle
-                                                : Icons.error_outline,
-                                            color: Colors.white,
-                                            size: 24.scale,
-                                          ),
-                                          SizedBox(width: 12.w),
-                                          Text(
-                                            ok
-                                                ? 'ส่งข้อเสนอแนะเรียบร้อยแล้ว ขอบคุณ!'
-                                                : 'ส่งข้อเสนอแนะไม่สำเร็จ',
-                                            style: TextStyle(fontSize: 14.sp),
-                                          ),
-                                        ],
-                                      ),
-                                      backgroundColor: ok
-                                          ? Colors.green
-                                          : Colors.red,
-                                    ),
-                                  );
-                                }
-                              } catch (e) {
-                                setModalState(() => isSending = false);
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('เกิดข้อผิดพลาด: $e'),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
-                                }
-                              }
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF6B35),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.scale),
-                        ),
+                            }
+                          },
+                    child: Container(
+                      width: double.infinity,
+                      height: 50.h,
+                      decoration: BoxDecoration(
+                        gradient: isSending ? null : AppTheme.brandGradient,
+                        color: isSending ? Colors.grey : null,
+                        borderRadius: BorderRadius.circular(12.scale),
+                        boxShadow: isSending ? null : [
+                          BoxShadow(
+                            color: AppTheme.brandPurple.withOpacity(0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                      child: isSending
-                          ? SizedBox(
-                              height: 24.scale,
-                              width: 24.scale,
-                              child: const CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
+                      child: Center(
+                        child: isSending
+                            ? SizedBox(
+                                height: 24.scale,
+                                width: 24.scale,
+                                child: const CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(
+                                'ส่งข้อเสนอแนะ',
+                                style: TextStyle(
+                                  fontSize: 16.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
                               ),
-                            )
-                          : Text(
-                              'ส่งข้อเสนอแนะ',
-                              style: TextStyle(fontSize: 16.sp),
-                            ),
+                      ),
                     ),
                   ),
                 ],

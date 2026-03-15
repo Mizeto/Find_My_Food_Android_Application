@@ -49,13 +49,13 @@ class LoginScreen extends StatelessWidget {
           child: ListView(
             padding: EdgeInsets.symmetric(horizontal: 28.w),
             children: [
-              SizedBox(height: 30.h),
+              SizedBox(height: 20.h), // Reduced from 30
               _buildTopIllustration(),
-              SizedBox(height: 24.h),
+              SizedBox(height: 16.h), // Reduced from 24
               _buildGreeting(),
-              SizedBox(height: 32.h),
+              SizedBox(height: 24.h), // Reduced from 32
               const _LoginForm(),
-              SizedBox(height: 20.h),
+              SizedBox(height: 12.h), // Reduced from 20
             ],
           ),
         ),
@@ -68,10 +68,10 @@ class LoginScreen extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Background decoration
+          // Background decoration (Further reduced)
           Container(
-            width: 160.scale,
-            height: 160.scale,
+            width: 100.scale,
+            height: 100.scale,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
@@ -83,8 +83,8 @@ class LoginScreen extends StatelessWidget {
             ),
           ),
           Container(
-            width: 120,
-            height: 120,
+            width: 75.scale,
+            height: 75.scale,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
@@ -95,8 +95,15 @@ class LoginScreen extends StatelessWidget {
               ),
             ),
           ),
-          // Chef emoji
-          Text('👨‍🍳', style: TextStyle(fontSize: 64.sp)),
+          // App Logo (Replaces Chef emoji)
+          ClipOval(
+            child: Image.asset(
+              AppTheme.logo,
+              width: 80.scale,
+              height: 80.scale,
+              fit: BoxFit.contain,
+            ),
+          ),
         ],
       ),
     );
@@ -108,21 +115,26 @@ class LoginScreen extends StatelessWidget {
         ShaderMask(
           shaderCallback: (bounds) =>
               AppTheme.brandGradient.createShader(bounds),
-          child: Text(
-            'Hello!',
-            style: TextStyle(
-              fontSize: 36.sp,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              'Welcome to Find My Food',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 22.sp, // Reduced to fit one line better
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
           ),
         ),
-        const SizedBox(height: 6),
+        SizedBox(height: 4.h), // Reduced from 8
         Text(
-          'Welcome to Find My Food',
+          'เข้าสู่ระบบเพื่อเริ่มต้นความอร่อย',
           style: TextStyle(
-            fontSize: 16,
+            fontSize: 13.sp, // Reduced from 14
             color: Colors.grey[500],
+            letterSpacing: 0.3,
           ),
         ),
       ],

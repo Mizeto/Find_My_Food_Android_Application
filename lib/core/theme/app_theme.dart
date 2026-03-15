@@ -130,4 +130,10 @@ class AppTheme {
       foregroundColor: Colors.white,
     ),
   );
+
+  // Asset Constants
+  static const String logo = 'assets/icon/in_app_logo_512.png';
+  static const String splashLogo = 'assets/images/splash_logo_1024.png';
+  static const String illustrationScan = 'assets/images/scan_illustration.png';
+  static const String illustrationFood = 'assets/images/food_illustration.png';
 }

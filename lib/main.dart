@@ -139,7 +139,8 @@ class AuthWrapper extends StatelessWidget {
             return FutureBuilder<SharedPreferences>(
               future: prefs,
               builder: (context, snapshot) {
-                final isCompleted = snapshot.data?.getBool('onboarding_completed') ?? false;
+                final isCompleted =
+                    snapshot.data?.getBool('onboarding_completed') ?? false;
                 if (isCompleted) return const LoginScreen();
                 return const OnboardingScreen();
               },
@@ -188,7 +189,14 @@ class SplashScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: const Text('🍳', style: TextStyle(fontSize: 60)),
+                child: ClipOval(
+                  child: Image.asset(
+                    AppTheme.splashLogo,
+                    width: 120,
+                    height: 120,
+                    fit: BoxFit.contain,
+                  ),
+                ),
               ),
               const SizedBox(height: 32),
               const Text(

@@ -4,7 +4,7 @@ import '../../../data/models/notification_model.dart';
 import '../../auth/services/auth_service.dart';
 
 class NotificationApiService {
-  static const String baseUrl = 'https://find-my-food-api.onrender.com';
+  static const String baseUrl = 'http://45.91.134.142';
   final AuthService _authService = AuthService();
 
   Future<Map<String, String>> _getHeaders() async {
@@ -106,16 +106,4 @@ class NotificationApiService {
     }
   }
 
-  /// GET /notification/sendExpirePushNotification
-  Future<bool> sendTestExpirePush() async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/notification/sendExpirePushNotification'),
-        headers: {'Accept': 'application/json'}, // No Auth required based on curl
-      );
-      return response.statusCode == 200;
-    } catch (e) {
-      return false;
-    }
-  }
 }

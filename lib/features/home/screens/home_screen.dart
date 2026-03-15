@@ -303,11 +303,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 if (state is HomeLoaded) {
                   final isGuest = context.watch<AuthCubit>().isGuest;
+                  final isFiltering = state.selectedCategoryId != null || 
+                                     state.selectedFilterCategoryIds.isNotEmpty || 
+                                     state.selectedFilterTagIds.isNotEmpty ||
+                                     state.searchQuery.isNotEmpty;
+
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 1. Recommended for You (Horizontal) - Hide for guests
-                      if (!isGuest && state.recommendedForYou.isNotEmpty)
+                      // 1. Recommended for You (Horizontal) - Hide for guests and when filtering
+                      if (!isGuest && !isFiltering && state.recommendedForYou.isNotEmpty)
                         _buildHorizontalSection(
                           context: context,
                           title: 'แนะนำสำหรับคุณ ✨',
@@ -315,8 +320,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           isDarkMode: isDarkMode,
                         ),
 
-                      // 2. Based on Stock (Horizontal) - Hide for guests
-                      if (!isGuest && state.recommendedFromStock.isNotEmpty)
+                      // 2. Based on Stock (Horizontal) - Hide for guests and when filtering
+                      if (!isGuest && !isFiltering && state.recommendedFromStock.isNotEmpty)
                         _buildHorizontalSection(
                           context: context,
                           title: 'เมนูจากของที่มี 🥦',
@@ -324,8 +329,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           isDarkMode: isDarkMode,
                         ),
 
-                      // 3. Category Chips
-                      if (state.categories.isNotEmpty)
+                      // 3. Category Chips - Hide when filtering
+                      if (!isFiltering && state.categories.isNotEmpty)
                         _buildCategoryChips(
                           context: context,
                           categories: state.categories,
@@ -341,34 +346,35 @@ class _HomeScreenState extends State<HomeScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                'สูตรอาหารยอดนิยม 🔥',
+                                isFiltering ? 'ผลการค้นหา 🔍' : 'สูตรอาหารยอดนิยม 🔥',
                                 style: TextStyle(
                                   fontSize: 18.sp,
                                   fontWeight: FontWeight.bold,
                                   color: isDarkMode ? Colors.white : Colors.black87,
                                 ),
                               ),
-                              GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => SeeAllScreen(
-                                        title: 'เมนูที่แนะนำสำหรับคุณ ✨',
-                                        recipes: state.recipes,
+                              if (!isFiltering) // Only show See all for default list
+                                GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => SeeAllScreen(
+                                          title: 'เมนูที่แนะนำสำหรับคุณ ✨',
+                                          recipes: state.recipes,
+                                        ),
                                       ),
+                                    );
+                                  },
+                                  child: Text(
+                                    'See all',
+                                    style: TextStyle(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppTheme.brandPurple,
                                     ),
-                                  );
-                                },
-                                child: Text(
-                                  'See all',
-                                  style: TextStyle(
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.w500,
-                                    color: AppTheme.brandPurple,
                                   ),
                                 ),
-                              ),
                             ],
                           ),
                         ),

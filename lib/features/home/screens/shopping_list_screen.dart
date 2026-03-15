@@ -539,76 +539,87 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                 final item = list.items[index];
                 return InkWell(
                   onTap: isEditing ? null : () => _showItemDialog(item: item), // Disable edit dialog in edit mode
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-                    child: Row(
-                      children: [
-                        // Checkbox (Hide in Edit Mode)
-                        if (!isEditing)
-                          SizedBox(
-                            height: 24,
-                            width: 24,
-                            child: Checkbox(
-                              value: item.isCheck,
-                              activeColor: AppTheme.primaryGreen,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                              onChanged: (val) => _toggleCheck(item),
-                            ),
-                          )
-                        else
-                          const SizedBox(width: 24), // Keep spacing or remove
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 300),
+                    opacity: item.isCheck ? 0.5 : 1.0,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                      child: Row(
+                        children: [
+                          // Checkbox (Hide in Edit Mode)
+                          if (!isEditing)
+                            SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: Checkbox(
+                                value: item.isCheck,
+                                activeColor: AppTheme.primaryGreen,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                onChanged: (val) => _toggleCheck(item),
+                              ),
+                            )
+                          else
+                            const SizedBox(width: 24), // Keep spacing or remove
 
-                        const SizedBox(width: 16),
-                        
-                        // Image placeholder
-                        Container(
-                          width: 50.scale,
-                          height: 50.scale,
-                          decoration: BoxDecoration(
-                            color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.grey[100],
-                            borderRadius: BorderRadius.circular(8.scale),
-                            border: Border.all(color: isDarkMode ? Colors.white24 : Colors.grey[200]!),
+                          const SizedBox(width: 16),
+                          
+                          // Image placeholder
+                          Container(
+                            width: 50.scale,
+                            height: 50.scale,
+                            decoration: BoxDecoration(
+                              color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.grey[100],
+                              borderRadius: BorderRadius.circular(8.scale),
+                              border: Border.all(color: isDarkMode ? Colors.white24 : Colors.grey[200]!),
+                            ),
+                            child: Center(
+                              child: Icon(
+                                Icons.fastfood, 
+                                size: 20.scale, 
+                                color: isDarkMode ? Colors.white54 : Colors.grey[400]
+                              )
+                            ),
                           ),
-                          child: Center(child: Icon(Icons.fastfood, size: 20.scale, color: isDarkMode ? Colors.white54 : Colors.grey[400])),
-                        ),
-                        SizedBox(width: 16.w),
-                        
-                        // Details
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                item.itemName,
-                                style: TextStyle(
-                                  fontSize: 16.sp,
-                                  fontWeight: FontWeight.w500,
-                                  color: isDarkMode ? Colors.white : Colors.black87,
+                          SizedBox(width: 16.w),
+                          
+                          // Details
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item.itemName,
+                                  style: TextStyle(
+                                    fontSize: 16.sp,
+                                    fontWeight: FontWeight.w500,
+                                    color: isDarkMode ? Colors.white : Colors.black87,
+                                    decoration: item.isCheck ? TextDecoration.lineThrough : null,
+                                  ),
                                 ),
-                              ),
-                              SizedBox(height: 4.h),
-                              Container(
-                                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
-                                decoration: BoxDecoration(
-                                  color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.grey[100],
-                                  borderRadius: BorderRadius.circular(4.scale),
+                                SizedBox(height: 4.h),
+                                Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                                  decoration: BoxDecoration(
+                                    color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.grey[100],
+                                    borderRadius: BorderRadius.circular(4.scale),
+                                  ),
+                                  child: Text(
+                                    '${item.quantity.toStringAsFixed(0)} ${item.unitName ?? 'หน่วย'}',
+                                    style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.grey[600], fontSize: 12.sp),
+                                  ),
                                 ),
-                                child: Text(
-                                  '${item.quantity.toStringAsFixed(0)} ${item.unitName ?? 'หน่วย'}',
-                                  style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.grey[600], fontSize: 12.sp),
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        
-                        // Delete Item Button (Only in Edit Mode)
-                        if (isEditing)
-                          IconButton(
-                            icon: Icon(Icons.delete_outline, color: Colors.deepOrange, size: 24.scale),
-                            onPressed: () => _confirmDeleteItem(item),
-                          ),
-                      ],
+                          
+                          // Delete Item Button (Only in Edit Mode)
+                          if (isEditing)
+                            IconButton(
+                              icon: Icon(Icons.delete_outline, color: Colors.deepOrange, size: 24.scale),
+                              onPressed: () => _confirmDeleteItem(item),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 );

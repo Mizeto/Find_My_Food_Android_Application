@@ -5,7 +5,7 @@ import '../models/shopping_model.dart';
 import '../models/food_model.dart'; // For UnitModel if needed, though strictly not used in service return types yet
 
 class ShoppingService {
-  static const String baseUrl = 'http://45.91.134.142';
+  static final String baseUrl = 'http://45.91.134.142';
 
   Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();

@@ -9,6 +9,7 @@ import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../../profile/services/user_service.dart'; // Import UserService
 import '../../notification/services/notification_service.dart';
+import '../../notification/services/notification_api_service.dart';
 
 // Auth States
 abstract class AuthState extends Equatable {
@@ -340,6 +341,7 @@ class AuthCubit extends Cubit<AuthState> {
           await _cacheUser(finalUser);
           print('Emit AuthAuthenticated'); // Debug print
           emit(AuthAuthenticated(finalUser));
+          
         }
       } else {
         throw Exception('Invalid response from server');
