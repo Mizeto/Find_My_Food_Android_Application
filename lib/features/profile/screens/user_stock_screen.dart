@@ -640,16 +640,6 @@ class _UserStockScreenState extends State<UserStockScreen> with SingleTickerProv
   }
 
   String _getEmojiForItem(String name) {
-    final lower = name.toLowerCase();
-    if (lower.contains('หมู') || lower.contains('pork')) return '🐷';
-    if (lower.contains('ไก่') || lower.contains('chicken')) return '🍗';
-    if (lower.contains('ไข่') || lower.contains('egg')) return '🥚';
-    if (lower.contains('กาก') || lower.contains('rice')) return '🍚';
-    if (lower.contains('ผัก') || lower.contains('veg')) return '🥦';
-    if (lower.contains('น้ำ') || lower.contains('water')) return '💧';
-    if (lower.contains('นม') || lower.contains('milk')) return '🥛';
-    if (lower.contains('เนื้อ') || lower.contains('beef')) return '🥩';
-    if (lower.contains('ปลา') || lower.contains('fish')) return '🐟';
     return '📦';
   }
 }

@@ -8,8 +8,8 @@ class RecipeModel {
   final String imageUrl;
   final String username;
   final String? createDate;
-  final int likeCount; // Add this
-  final bool isLiked; // Add this
+  final int likeCount;
+  final bool isLiked;
   final bool isPublic;
   final bool isActive;
   final List<String>? tags;
@@ -42,7 +42,6 @@ class RecipeModel {
     var ingredientsList = json['ingredients'] as List?;
     var stepsList = json['steps'] as List?;
 
-    // Safe tags parsing
     List<String> parsedTags = [];
     try {
       if (json['tags'] != null && json['tags'] is List) {
@@ -98,8 +97,7 @@ class RecipeModel {
 class RecipeIngredient {
   final int ingredientId;
   final String ingredientName;
-  // final IconData? quantity; // Removed erroneous field
-  final double quantityValue; // JSON says "quantity": 1
+  final double quantityValue;
   final int unitId;
   final String unitName;
   final bool isMainIngredient;
@@ -218,10 +216,8 @@ class DishPrediction {
   });
 
   factory DishPrediction.fromJson(Map<String, dynamic> json) {
-    // Robust parsing for various backend formats
     final name = json['class_name'] ?? json['recipe_name'] ?? json['label'] ?? json['prediction'] ?? 'ไม่ทราบข้อมูล';
     
-    // Safety against Null is not a subtype of num
     double conf = 0.0;
     final rawConf = json['confidence'] ?? json['score'] ?? json['probability'];
     if (rawConf is num) {
@@ -229,7 +225,6 @@ class DishPrediction {
     } else if (rawConf is String) {
       conf = double.tryParse(rawConf) ?? 0.0;
     } else if (name != 'ไม่ทราบข้อมูล' && rawConf == null) {
-      // If we have a name but no confidence, default to 1.0 (100%) or something visible
       conf = 1.0; 
     }
 
@@ -248,34 +243,57 @@ class DishAIResponse {
   DishAIResponse({required this.top3, this.recipes, this.ingredients = const []});
 
   factory DishAIResponse.fromJson(dynamic json) {
-    List<Recipe>? recipes;
-    List<DishPrediction> predictions = [];
+    try {
+      if (json == null) {
+        return DishAIResponse(top3: [], ingredients: [], recipes: []);
+      }
 
-    if (json is List) {
-      recipes = json.map((e) => Recipe.fromJson(e as Map<String, dynamic>)).toList();
-      predictions = recipes.map((r) => DishPrediction(className: r.title, confidence: 1.0)).toList();
+      if (json is List) {
+        final recipes = json.whereType<Map<String, dynamic>>()
+            .map((e) => Recipe.fromJson(e)).toList();
+        final predictions = recipes.map((r) => DishPrediction(className: r.title, confidence: 1.0)).toList();
+        return DishAIResponse(top3: predictions, recipes: recipes, ingredients: const []);
+      }
+
+      if (json is! Map<String, dynamic>) {
+        return DishAIResponse(top3: [], ingredients: [], recipes: []);
+      }
+
+      Map<String, dynamic> target = json;
+      if (json.containsKey('data')) {
+        final data = json['data'];
+        if (data is Map<String, dynamic>) {
+          target = data;
+        } else if (data is List) {
+          final recipes = data.whereType<Map<String, dynamic>>()
+              .map((e) => Recipe.fromJson(e)).toList();
+          final predictions = recipes.map((r) => DishPrediction(className: r.title, confidence: 1.0)).toList();
+          return DishAIResponse(top3: predictions, recipes: recipes, ingredients: []);
+        }
+      }
+
+      final list = (target['top_3'] ?? target['results'] ?? target['predictions']) as List?;
+      final predictions = list?.whereType<Map<String, dynamic>>()
+          .map((e) => DishPrediction.fromJson(e)).toList() ?? [];
       
+      final ingredientsList = (target['ingredients'] ?? target['items']) as List?;
+      final ingredients = ingredientsList?.map((e) => e.toString()).toList() ?? [];
+      
+      final recipesList = (target['recipes'] ?? target['data']) as List?;
+      List<Recipe>? recipes;
+      if (recipesList != null && recipesList is List) {
+        recipes = recipesList.whereType<Map<String, dynamic>>()
+            .map((e) => Recipe.fromJson(e)).toList();
+      }
+
       return DishAIResponse(
         top3: predictions,
         recipes: recipes,
-        ingredients: const [],
+        ingredients: ingredients,
       );
+    } catch (e) {
+      return DishAIResponse(top3: [], ingredients: [], recipes: []);
     }
-    
-    final list = (json['top_3'] ?? json['results'] ?? json['predictions']) as List?;
-    predictions = list?.map((e) => DishPrediction.fromJson(e as Map<String, dynamic>)).toList() ?? [];
-    
-    final ingredientsList = (json['ingredients'] ?? json['items']) as List?;
-    final ingredients = ingredientsList?.map((e) => e.toString()).toList() ?? [];
-    
-    final recipesList = (json['recipes'] ?? json['data']) as List?;
-    recipes = recipesList?.map((e) => Recipe.fromJson(e as Map<String, dynamic>)).toList();
-
-    return DishAIResponse(
-      top3: predictions,
-      recipes: recipes,
-      ingredients: ingredients,
-    );
   }
 }
 
@@ -377,7 +395,7 @@ class CategoryModel {
 
   factory CategoryModel.fromJson(Map<String, dynamic> json) {
     return CategoryModel(
-      categoryId: json['category_id'] ?? json['tag_id'] ?? 0, // In case of overlap format
+      categoryId: json['category_id'] ?? json['tag_id'] ?? 0,
       categoryName: json['category_name'] ?? json['tag_name'] ?? '',
     );
   }

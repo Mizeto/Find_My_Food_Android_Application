@@ -26,7 +26,7 @@ class ScanFoodCubit extends Cubit<ScanFoodState> {
           return;
         }
         
-        if (dishResult.top3.isEmpty && dishResult.ingredients.isEmpty) {
+        if (dishResult.top3.isEmpty && dishResult.ingredients.isEmpty && (dishResult.recipes == null || dishResult.recipes!.isEmpty)) {
           emit(const ScanFoodError('NO_FOOD_DATA'));
           return;
         }

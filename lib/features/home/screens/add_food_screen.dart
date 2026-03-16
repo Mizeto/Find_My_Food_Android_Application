@@ -9,7 +9,8 @@ import '../services/food_service.dart';
 import '../models/food_model.dart';
 
 class AddFoodScreen extends StatefulWidget {
-  const AddFoodScreen({super.key});
+  final RecipeModel? initialRecipe;
+  const AddFoodScreen({super.key, this.initialRecipe});
 
   @override
   State<AddFoodScreen> createState() => _AddFoodScreenState();
@@ -40,10 +41,10 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
   final Set<int> _selectedTagIds = {};
   
   // Dynamic Lists
-  final List<Map<String, dynamic>> _ingredients = [
+  List<Map<String, dynamic>> _ingredients = [
     {'name': '', 'qty': '1', 'unit_id': null, 'id': 0, 'main': true}
   ];
-  final List<String> _steps = [''];
+  List<String> _steps = [''];
   
   bool _isPublic = true;
 
@@ -52,6 +53,53 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
     super.initState();
     _loadUnits();
     _loadCategoriesAndTags();
+    _initializeForEdit();
+  }
+
+  void _initializeForEdit() {
+    if (widget.initialRecipe != null) {
+      final recipe = widget.initialRecipe!;
+      _nameController.text = recipe.recipeName;
+      _descriptionController.text = recipe.description;
+      _timeController.text = recipe.cookingTimeMin.toString();
+      _isPublic = recipe.isPublic;
+      
+      if (recipe.imageUrl.isNotEmpty) {
+        if (recipe.imageUrl.startsWith('http')) {
+          _aiGeneratedUrl = recipe.imageUrl;
+        }
+      }
+
+      // Categories
+      if (recipe.categoryDetails != null) {
+        for (var cat in recipe.categoryDetails!) {
+          _selectedCategoryIds.add(cat.categoryId);
+        }
+      }
+
+      // Tags
+      if (recipe.tagDetails != null) {
+        for (var tag in recipe.tagDetails!) {
+          _selectedTagIds.add(tag.tagId);
+        }
+      }
+
+      // Ingredients
+      if (recipe.ingredients != null && recipe.ingredients!.isNotEmpty) {
+        _ingredients = recipe.ingredients!.map((i) => <String, dynamic>{
+          'name': i.ingredientName,
+          'qty': i.quantityValue.toString().replaceAll(RegExp(r'\.0$'), ''),
+          'unit_id': i.unitId,
+          'id': i.ingredientId,
+          'main': i.isMainIngredient,
+        }).toList();
+      }
+
+      // Steps
+      if (recipe.steps != null && recipe.steps!.isNotEmpty) {
+        _steps = recipe.steps!.map((s) => s.instruction).toList();
+      }
+    }
   }
 
   Future<void> _loadUnits() async {
@@ -158,7 +206,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
 
   void _addIngredient({bool isMain = false}) {
     setState(() {
-      _ingredients.add({'name': '', 'qty': '1', 'unit_id': _units.isNotEmpty ? _units.first.unitId : null, 'id': 0, 'main': isMain});
+      _ingredients.add(<String, dynamic>{'name': '', 'qty': '1', 'unit_id': _units.isNotEmpty ? _units.first.unitId : null, 'id': 0, 'main': isMain});
     });
   }
 
@@ -233,17 +281,45 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
         'tags': _selectedTagIds.toList(),
       };
 
-      // 3. Create Recipe
-      final success = await _recipeService.createNewRecipe(recipeData);
+      // 3. Create or Update Recipe
+      bool success = false;
+      if (widget.initialRecipe != null) {
+        // Update Mode
+        final recipeId = widget.initialRecipe!.recipeId;
+        
+        final headerData = {
+          'recipe_name': recipeData['recipe_name'],
+          'description': recipeData['description'],
+          'cooking_time_min': recipeData['cooking_time_min'],
+          'is_public': recipeData['is_public'],
+          'is_active': widget.initialRecipe?.isActive ?? true,
+          'categories': recipeData['categories'] ?? [],
+          'tags': recipeData['tags'] ?? [],
+        };
+        
+        final headerSuccess = await _recipeService.updateRecipeHeaderById(recipeId, headerData);
+        final imageSuccess = await _recipeService.updateRecipeImage(recipeId, recipeData['image_url'] as String);
+        final ingredientsSuccess = await _recipeService.updateRecipeIngredientById(recipeId, recipeData['ingredients'] as List<Map<String, dynamic>>);
+        final stepsSuccess = await _recipeService.updateRecipeStepById(recipeId, recipeData['steps'] as List<Map<String, dynamic>>);
+        
+        print('DEBUG: Update Breakdown - Header: $headerSuccess, Image: $imageSuccess, Ingredients: $ingredientsSuccess, Steps: $stepsSuccess');
+        success = headerSuccess && imageSuccess && ingredientsSuccess && stepsSuccess;
+      } else {
+        // Create Mode
+        success = await _recipeService.createNewRecipe(recipeData);
+      }
 
       if (mounted) {
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('บันทึกสูตรอาหารเรียบร้อย!'), backgroundColor: AppTheme.primaryGreen),
+            SnackBar(
+              content: Text(widget.initialRecipe != null ? 'อัปเดตสูตรอาหารเรียบร้อย!' : 'บันทึกสูตรอาหารเรียบร้อย!'), 
+              backgroundColor: AppTheme.primaryGreen
+            ),
           );
           Navigator.pop(context, true);
         } else {
-          _showErrorDialog('บันทึกไม่สำเร็จ');
+          _showErrorDialog(widget.initialRecipe != null ? 'อัปเดตไม่สำเร็จ' : 'บันทึกไม่สำเร็จ');
         }
       }
     } catch (e) {
@@ -364,7 +440,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
       backgroundColor: isDarkMode ? const Color(0xFF1A1A2E) : const Color(0xFFF8F9FA),
       appBar: AppBar(
         toolbarHeight: 80.h,
-        title: Text('สร้างสูตรอาหาร 🍳', style: TextStyle(fontSize: 20.sp)),
+        title: Text(widget.initialRecipe != null ? 'แก้ไขสูตรอาหาร ✏️' : 'สร้างสูตรอาหาร 🍳', style: TextStyle(fontSize: 20.sp)),
         centerTitle: true,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
@@ -600,7 +676,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                 child: ElevatedButton(
                     onPressed: _isLoading ? null : _submitpost,
                     style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryOrange, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.scale))),
-                    child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : Text('บันทึกสูตรอาหาร', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
+                    child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : Text(widget.initialRecipe != null ? 'อัปเดตสูตรอาหาร' : 'บันทึกสูตรอาหาร', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],

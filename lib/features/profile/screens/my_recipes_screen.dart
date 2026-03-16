@@ -5,6 +5,7 @@ import '../../../core/utils/responsive_helper.dart';
 import '../../../data/repositories/recipe_repository.dart';
 import '../../../data/models/recipe_model.dart';
 import '../../home/widgets/recipe_card.dart';
+import '../../home/screens/add_food_screen.dart';
 
 class MyRecipesScreen extends StatefulWidget {
   const MyRecipesScreen({super.key});
@@ -44,6 +45,83 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
           _error = e.toString();
           _isLoading = false;
         });
+      }
+    }
+  }
+
+  Future<void> _editRecipe(Recipe recipe) async {
+    try {
+      setState(() => _isLoading = true);
+      final recipeModel = await context.read<RecipeRepository>().getRecipeModelDetail(recipe.id);
+      
+      if (mounted) {
+        setState(() => _isLoading = false);
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AddFoodScreen(initialRecipe: recipeModel),
+          ),
+        );
+
+        if (result == true) {
+          _loadMyRecipes();
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ไม่สามารถโหลดข้อมูลสูตรอาหารได้: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteRecipe(Recipe recipe) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('ลบสูตรอาหาร', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold, color: Colors.red)),
+        content: Text('คุณต้องการลบ "${recipe.title}" ใช่หรือไม่?', style: TextStyle(fontSize: 16.sp)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('ยกเลิก', style: TextStyle(fontSize: 14.sp)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text('ลบ', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        setState(() => _isLoading = true);
+        final success = await context.read<RecipeRepository>().deleteMyRecipe(recipe.id);
+        
+        if (mounted) {
+          if (success) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('ลบสูตรอาหารเรียบร้อยแล้ว')),
+            );
+            _loadMyRecipes();
+          } else {
+            setState(() => _isLoading = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('ไม่สามารถลบสูตรอาหารได้')),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('เกิดข้อผิดพลาด: $e')),
+          );
+        }
       }
     }
   }
@@ -152,7 +230,12 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
       itemCount: _recipes!.length,
       itemBuilder: (context, index) {
         final recipe = _recipes![index];
-        return RecipeCard(recipe: recipe, index: index);
+        return RecipeCard(
+          recipe: recipe, 
+          index: index,
+          onEdit: () => _editRecipe(recipe),
+          onDelete: () => _deleteRecipe(recipe),
+        );
       },
     );
   }

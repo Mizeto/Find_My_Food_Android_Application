@@ -216,17 +216,23 @@ class RecipeService {
     List<int>? tagIds,
   }) async {
     try {
-      final queryParams = <String, String>{};
+      final queryBuffer = StringBuffer();
       if (categoryIds != null && categoryIds.isNotEmpty) {
-        queryParams['categories'] = categoryIds.join(',');
+        for (final id in categoryIds) {
+          if (queryBuffer.isNotEmpty) queryBuffer.write('&');
+          queryBuffer.write('categories=${Uri.encodeComponent(id.toString())}');
+        }
       }
       if (tagIds != null && tagIds.isNotEmpty) {
-        queryParams['tags'] = tagIds.join(',');
+        for (final id in tagIds) {
+          if (queryBuffer.isNotEmpty) queryBuffer.write('&');
+          queryBuffer.write('tags=${Uri.encodeComponent(id.toString())}');
+        }
       }
 
-      final uri = Uri.parse(
-        '$baseUrl/recipe/getSearchRecipeFilterOption',
-      ).replace(queryParameters: queryParams);
+      final urlString = '$baseUrl/recipe/getSearchRecipeFilterOption' + 
+                      (queryBuffer.isNotEmpty ? '?${queryBuffer.toString()}' : '');
+      final uri = Uri.parse(urlString);
       print('Searching with filter: $uri');
 
       final headers = await _getHeaders();
@@ -269,6 +275,75 @@ class RecipeService {
       }
     } catch (e) {
       throw Exception('Connection error: $e');
+    }
+  }
+
+  // GET /recipe/getRecipeFromIngredient
+  Future<DishAIResponse?> getRecipeFromIngredient(List<String> ingredients) async {
+    try {
+      final token = await _getToken();
+      // Use a manual query string to repeat the key for each ingredient
+      final queryBuffer = StringBuffer();
+      for (int i = 0; i < ingredients.length; i++) {
+        queryBuffer.write('ingredient_list=${Uri.encodeComponent(ingredients[i])}');
+        if (i < ingredients.length - 1) queryBuffer.write('&');
+      }
+      
+      final url = Uri.parse('$baseUrl/recipe/getRecipeFromIngredient?${queryBuffer.toString()}');
+      
+      print('DEBUG: Fetching recipes from: $url');
+
+      final response = await http.get(
+        url,
+        headers: {
+          'accept': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 30));
+
+      print('DEBUG: Response Status: ${response.statusCode}');
+      print('DEBUG: Body length: ${response.bodyBytes.length}');
+
+      if (response.statusCode == 200) {
+        final decodedBody = utf8.decode(response.bodyBytes);
+        print('DEBUG: Body decoded');
+        final dynamic jsonResponse = jsonDecode(decodedBody);
+        print('DEBUG: JSON parsed');
+        return DishAIResponse.fromJson(jsonResponse);
+      } else {
+        print('DEBUG: Error status ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      print('DEBUG: Exception in getRecipeFromIngredient: $e');
+      return null;
+    }
+  }
+
+  // DELETE /recipe/deleteMyRecipeByRecipeId/{recipe_id}
+  Future<bool> deleteMyRecipeByRecipeId(int recipeId) async {
+    try {
+      final token = await _getToken();
+      final url = Uri.parse('$baseUrl/recipe/deleteMyRecipeByRecipeId/$recipeId');
+      
+      print('DEBUG: Deleting recipe: $url');
+
+      final response = await http.delete(
+        url,
+        headers: {
+          'accept': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
+        return jsonResponse['status'] == 'success';
+      }
+      return false;
+    } catch (e) {
+      print('DEBUG: Exception in deleteMyRecipeByRecipeId: $e');
+      return false;
     }
   }
 
@@ -315,19 +390,51 @@ class RecipeService {
     Map<String, dynamic> headerData,
   ) async {
     try {
-      print(
-        'Updating recipe header: $baseUrl/recipe/updateRecipeHeaderById/$recipeId',
-      );
+      print('Updating recipe header (PUT): $baseUrl/recipe/updateRecipeHeaderById/$recipeId');
       final headers = await _getHeaders();
+      
+      print('DEBUG: Header Update Body: ${jsonEncode(headerData)}');
+
       final response = await http.put(
         Uri.parse('$baseUrl/recipe/updateRecipeHeaderById/$recipeId'),
         headers: headers,
         body: jsonEncode(headerData),
       );
 
+      print('DEBUG: Update Header Result: ${response.statusCode}');
+      if (response.statusCode != 200) {
+        print('DEBUG: Update Header Error: ${response.body}');
+      }
+
       return response.statusCode == 200;
     } catch (e) {
       throw Exception('Connection error: $e');
+    }
+  }
+
+  // POST /recipe/updateRecipeImage
+  Future<bool> updateRecipeImage(int recipeId, String imageUrl) async {
+    try {
+      print('Updating recipe image: $baseUrl/recipe/updateRecipeImage');
+      final headers = await _getHeaders();
+      final body = {
+        'recipe_id': recipeId,
+        'image_url': imageUrl,
+      };
+      final response = await http.post(
+        Uri.parse('$baseUrl/recipe/updateRecipeImage'),
+        headers: headers,
+        body: jsonEncode(body),
+      );
+
+      print('DEBUG: Update Image Result: ${response.statusCode}');
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        print('DEBUG: Update Image Error: ${response.body}');
+      }
+
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      throw Exception('Connection error updating image: $e');
     }
   }
 
@@ -347,6 +454,11 @@ class RecipeService {
         headers: headers,
         body: jsonEncode(body),
       );
+
+      print('DEBUG: Update Ingredients Result: ${response.statusCode}');
+      if (response.statusCode != 200) {
+        print('DEBUG: Update Ingredients Error: ${response.body}');
+      }
 
       return response.statusCode == 200;
     } catch (e) {
@@ -370,6 +482,11 @@ class RecipeService {
         headers: headers,
         body: jsonEncode(body),
       );
+
+      print('DEBUG: Update Steps Result: ${response.statusCode}');
+      if (response.statusCode != 200) {
+        print('DEBUG: Update Steps Error: ${response.body}');
+      }
 
       return response.statusCode == 200;
     } catch (e) {
@@ -465,28 +582,7 @@ class RecipeService {
         print('Dish AI Raw Response: $decodedBody');
 
         final dynamic jsonResponse = jsonDecode(decodedBody);
-
-        // Handle both {status: "success", data: ...} and raw data formats
-        if (jsonResponse is Map<String, dynamic> &&
-            jsonResponse.containsKey('status')) {
-          if (jsonResponse['status'] == 'success') {
-            final data = jsonResponse['data'];
-            // Handle empty data
-            if (data == null || (data is List && data.isEmpty)) {
-              // Returning an empty DishAIResponse will trigger the NO_FOOD_DATA in Cubit
-              return DishAIResponse(top3: [], ingredients: [], recipes: []);
-            }
-            return DishAIResponse.fromJson(data);
-          } else {
-            final msg =
-                jsonResponse['message'] ??
-                'อัปโหลดรูปภาพไม่สำเร็จ กรุณาลองใหม่';
-            throw Exception(msg);
-          }
-        } else {
-          // Assume raw data directly
-          return DishAIResponse.fromJson(jsonResponse);
-        }
+        return DishAIResponse.fromJson(jsonResponse);
       } else {
         final errorBody = utf8.decode(response.bodyBytes);
         print('Dish AI Failed Response: $errorBody');
@@ -543,25 +639,7 @@ class RecipeService {
         print('Ingredient AI Raw Response: $decodedBody');
 
         final dynamic jsonResponse = jsonDecode(decodedBody);
-
-        if (jsonResponse is Map<String, dynamic> &&
-            jsonResponse.containsKey('status')) {
-          if (jsonResponse['status'] == 'success') {
-            final data = jsonResponse['data'];
-            // Handle empty data
-            if (data == null || (data is List && data.isEmpty)) {
-              return DishAIResponse(top3: [], ingredients: [], recipes: []);
-            }
-            // Since backend is returning recipes, we parse it as DishAIResponse
-            return DishAIResponse.fromJson(data);
-          } else {
-            throw Exception(
-              jsonResponse['message'] ?? 'Ingredient analysis failed',
-            );
-          }
-        } else {
-          return DishAIResponse.fromJson(jsonResponse);
-        }
+        return DishAIResponse.fromJson(jsonResponse);
       } else {
         final errorBody = utf8.decode(response.bodyBytes);
         print('Ingredient AI Failed Response: $errorBody');

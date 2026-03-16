@@ -144,6 +144,10 @@ class RecipeRepository {
     return _recipeService.getUserStockFromStorage(storageLocation);
   }
 
+  Future<RecipeModel> getRecipeModelDetail(int id) async {
+    return _recipeService.getRecipeDetailById(id);
+  }
+
   Future<String?> getItemExpireDate(String storageLocation, int itemId) async {
     return _recipeService.getItemExpireDate(storageLocation, itemId);
   }
@@ -243,5 +247,8 @@ class RecipeRepository {
     } catch (e) {
       throw Exception('Error searching with filter: $e');
     }
+  }
+  Future<bool> deleteMyRecipe(int recipeId) async {
+    return _recipeService.deleteMyRecipeByRecipeId(recipeId);
   }
 }

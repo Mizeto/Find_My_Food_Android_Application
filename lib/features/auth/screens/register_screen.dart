@@ -23,9 +23,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _isPasswordVisible = false;
-  String _selectedGender = 'Male';
+  String _selectedGender = 'เพศชาย';
 
-  final List<String> _genders = ['Male', 'Female', 'Other'];
+  final List<String> _genders = ['เพศชาย', 'เพศหญิง', 'อื่นๆ'];
   DateTime? _selectedDate;
   int _calculatedAge = 0;
 
@@ -44,21 +44,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void _onRegister() {
     if (_formKey.currentState!.validate()) {
       if (_selectedDate == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('กรุณาระบุวันเกิด')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('กรุณาระบุวันเกิด')));
+        return;
+      }
+
+      if (_selectedGender == 'เลือกเพศ') {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('กรุณาเลือกเพศ')));
         return;
       }
 
       context.read<AuthCubit>().register(
-            _usernameController.text.trim(),
-            _emailController.text.trim(),
-            _passwordController.text,
-            _firstNameController.text.trim(),
-            _lastNameController.text.trim(),
-            _selectedGender,
-            DateFormat('yyyy-MM-dd').format(_selectedDate!),
-          );
+        _usernameController.text.trim(),
+        _emailController.text.trim(),
+        _passwordController.text,
+        _firstNameController.text.trim(),
+        _lastNameController.text.trim(),
+        _selectedGender,
+        DateFormat('yyyy-MM-dd').format(_selectedDate!),
+      );
     }
   }
 
@@ -149,12 +156,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
         listener: (context, state) {
           if (state is AuthError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.red,
+              ),
             );
           } else if (state is AuthAuthenticated) {
             // Success: Clear stack and return to root (AuthWrapper)
             // AuthWrapper in main.dart will handle resetting the tab index.
-            Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+            Navigator.of(
+              context,
+            ).pushNamedAndRemoveUntil('/', (route) => false);
           } else if (state is AuthRegisterSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -163,7 +175,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
             );
             // Go back to login/root
-            Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+            Navigator.of(
+              context,
+            ).pushNamedAndRemoveUntil('/', (route) => false);
           }
         },
         builder: (context, state) {
@@ -180,7 +194,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   alignment: Alignment.centerLeft,
                   child: TextButton.icon(
                     onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.arrow_back_ios, size: 16.scale, color: const Color(0xFF2D2D3A)),
+                    icon: Icon(
+                      Icons.arrow_back_ios,
+                      size: 16.scale,
+                      color: const Color(0xFF2D2D3A),
+                    ),
                     label: const Text(
                       'Back to Login',
                       style: TextStyle(
@@ -220,8 +238,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           prefixIcon: Icons.email_outlined,
                         ),
                         validator: (value) {
-                          if (value == null || value.isEmpty) return 'กรุณากรอกอีเมล';
-                          if (!value.contains('@')) return 'รูปแบบอีเมลไม่ถูกต้อง';
+                          if (value == null || value.isEmpty)
+                            return 'กรุณากรอกอีเมล';
+                          if (!value.contains('@'))
+                            return 'รูปแบบอีเมลไม่ถูกต้อง';
                           return null;
                         },
                       ),
@@ -236,7 +256,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           prefixIcon: Icons.account_circle_outlined,
                         ),
                         validator: (value) {
-                          if (value == null || value.isEmpty) return 'กรุณากรอกชื่อผู้ใช้';
+                          if (value == null || value.isEmpty)
+                            return 'กรุณากรอกชื่อผู้ใช้';
                           return null;
                         },
                       ),
@@ -289,20 +310,38 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 child: DropdownButton<String>(
                                   value: _selectedGender,
                                   isExpanded: true,
-                                  icon: Icon(Icons.keyboard_arrow_down, color: Colors.grey[400]),
+                                  icon: Icon(
+                                    Icons.keyboard_arrow_down,
+                                    color: Colors.grey[400],
+                                  ),
                                   items: _genders
-                                      .map((g) => DropdownMenuItem(
-                                            value: g,
-                                            child: Row(
-                                              children: [
-                                                Icon(Icons.wc, size: 18.scale, color: Colors.grey[400]),
-                                                SizedBox(width: 8.w),
-                                                Text(g, style: TextStyle(fontSize: 14.sp)),
-                                              ],
-                                            ),
-                                          ))
+                                      .map(
+                                        (g) => DropdownMenuItem(
+                                          value: g,
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                Icons.wc,
+                                                size: 18.scale,
+                                                color: Colors.grey[400],
+                                              ),
+                                              SizedBox(width: 8.w),
+                                              Text(
+                                                g,
+                                                style: TextStyle(
+                                                  fontSize: 14.sp,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      )
                                       .toList(),
-                                  onChanged: isLoading ? null : (v) => setState(() => _selectedGender = v!),
+                                  onChanged: isLoading
+                                      ? null
+                                      : (v) => setState(
+                                          () => _selectedGender = v!,
+                                        ),
                                 ),
                               ),
                             ),
@@ -312,7 +351,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             child: TextFormField(
                               controller: _birthDateController,
                               readOnly: true,
-                              onTap: isLoading ? null : () => _selectDate(context),
+                              onTap: isLoading
+                                  ? null
+                                  : () => _selectDate(context),
                               decoration: _inputDecoration(
                                 label: 'วันเกิด',
                                 hint: 'วว/ดด/ปปปป',
@@ -322,12 +363,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                         padding: EdgeInsets.all(14.scale),
                                         child: Text(
                                           '$_calculatedAge ปี',
-                                          style: TextStyle(fontSize: 12.sp, color: Colors.grey[600]),
+                                          style: TextStyle(
+                                            fontSize: 12.sp,
+                                            color: Colors.grey[600],
+                                          ),
                                         ),
                                       )
                                     : null,
                               ),
-                              validator: (v) => (v == null || v.isEmpty) ? 'ระบุวันเกิด' : null,
+                              validator: (v) => (v == null || v.isEmpty)
+                                  ? 'ระบุวันเกิด'
+                                  : null,
                             ),
                           ),
                         ],
@@ -358,8 +404,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         ),
                         validator: (value) {
-                          if (value == null || value.isEmpty) return 'กรุณากรอกรหัสผ่าน';
-                          if (value.length < 6) return 'รหัสผ่านต้องยาวอย่างน้อย 6 ตัวอักษร';
+                          if (value == null || value.isEmpty)
+                            return 'กรุณากรอกรหัสผ่าน';
+                          if (value.length < 6)
+                            return 'รหัสผ่านต้องยาวอย่างน้อย 6 ตัวอักษร';
                           return null;
                         },
                       ),
@@ -376,8 +424,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                         style: TextStyle(fontSize: 16.sp),
                         validator: (value) {
-                          if (value == null || value.isEmpty) return 'กรุณายืนยันรหัสผ่าน';
-                          if (value != _passwordController.text) return 'รหัสผ่านไม่ตรงกัน';
+                          if (value == null || value.isEmpty)
+                            return 'กรุณายืนยันรหัสผ่าน';
+                          if (value != _passwordController.text)
+                            return 'รหัสผ่านไม่ตรงกัน';
                           return null;
                         },
                       ),
@@ -454,15 +504,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           _buildSocialButton(
-                            child: Text('G', style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.bold, color: Colors.red)),
+                            child: Text(
+                              'G',
+                              style: TextStyle(
+                                fontSize: 22.sp,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red,
+                              ),
+                            ),
                           ),
                           SizedBox(width: 20.w),
                           _buildSocialButton(
-                            child: Icon(Icons.apple, size: 28.scale, color: Colors.black),
+                            child: Icon(
+                              Icons.apple,
+                              size: 28.scale,
+                              color: Colors.black,
+                            ),
                           ),
                           SizedBox(width: 20.w),
                           _buildSocialButton(
-                            child: Icon(Icons.facebook, size: 28.scale, color: const Color(0xFF1877F2)),
+                            child: Icon(
+                              Icons.facebook,
+                              size: 28.scale,
+                              color: const Color(0xFF1877F2),
+                            ),
                           ),
                         ],
                       ),
@@ -474,7 +539,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         children: [
                           Text(
                             "Already have an account? ",
-                            style: TextStyle(color: Colors.grey[500], fontSize: 14.sp),
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 14.sp,
+                            ),
                           ),
                           GestureDetector(
                             onTap: () => Navigator.pop(context),

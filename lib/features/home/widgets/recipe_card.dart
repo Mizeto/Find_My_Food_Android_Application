@@ -11,12 +11,16 @@ class RecipeCard extends StatelessWidget {
   final Recipe recipe;
   final int index;
   final bool isHorizontal;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const RecipeCard({
     super.key,
     required this.recipe,
     required this.index,
     this.isHorizontal = false,
+    this.onEdit,
+    this.onDelete,
   });
 
   @override
@@ -102,17 +106,69 @@ class RecipeCard extends StatelessWidget {
               Positioned(
                 top: 8,
                 right: 8,
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    recipe.isLiked ? Icons.favorite : Icons.favorite_border,
-                    size: 18.scale,
-                    color: recipe.isLiked ? Colors.red : Colors.grey[400],
-                  ),
+                child: Row(
+                  children: [
+                    if (onEdit != null)
+                      GestureDetector(
+                        onTap: onEdit,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.9),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.edit_outlined,
+                            size: 18.scale,
+                            color: AppTheme.brandPurple,
+                          ),
+                        ),
+                      ),
+                    if (onEdit != null) const SizedBox(width: 8),
+                    if (onDelete != null)
+                      GestureDetector(
+                        onTap: onDelete,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.9),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.delete_outline,
+                            size: 18.scale,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ),
+                    if (onDelete != null) const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.9),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        recipe.isLiked ? Icons.favorite : Icons.favorite_border,
+                        size: 18.scale,
+                        color: recipe.isLiked ? Colors.red : Colors.grey[400],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -161,15 +217,15 @@ class RecipeCard extends StatelessWidget {
                         return Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                           decoration: BoxDecoration(
-                            color: AppTheme.brandPurple.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
+                            color: AppTheme.brandPurple.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(6.scale),
                           ),
                           child: Text(
                             (recipe.tags ?? [])[i],
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: AppTheme.brandPurple,
-                              fontWeight: FontWeight.w600,
+                            style: TextStyle(
+                              fontSize: 10.sp,
+                              color: AppTheme.brandPurple.withOpacity(0.8),
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         );
@@ -232,6 +288,26 @@ class RecipeCard extends StatelessWidget {
                       const SizedBox(width: 4),
                        Row(
                         children: [
+                              if (onEdit != null)
+                                GestureDetector(
+                                  onTap: onEdit,
+                                  child: Icon(
+                                    Icons.edit_outlined,
+                                    size: 14.scale,
+                                    color: AppTheme.brandPurple,
+                                  ),
+                                ),
+                              if (onEdit != null) SizedBox(width: 8.w),
+                              if (onDelete != null)
+                                GestureDetector(
+                                  onTap: onDelete,
+                                  child: Icon(
+                                    Icons.delete_outline,
+                                    size: 14.scale,
+                                    color: Colors.red,
+                                  ),
+                                ),
+                              if (onDelete != null) SizedBox(width: 8.w),
                                Icon(
                                 recipe.isLiked ? Icons.favorite : Icons.favorite_border,
                                 size: 12.scale,
@@ -270,16 +346,16 @@ class RecipeCard extends StatelessWidget {
                           return Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: AppTheme.brandPurple.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(10),
+                              color: AppTheme.brandPurple.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(6.scale),
                             ),
                             child: Center(
                               child: Text(
                                 (recipe.tags ?? [])[i],
-                                style: const TextStyle(
-                                  fontSize: 9,
-                                  color: AppTheme.brandPurple,
-                                  fontWeight: FontWeight.w600,
+                                style: TextStyle(
+                                  fontSize: 8.sp,
+                                  color: AppTheme.brandPurple.withOpacity(0.8),
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ),
