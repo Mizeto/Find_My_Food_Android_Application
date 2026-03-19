@@ -38,41 +38,127 @@ class RecipeModel {
     this.steps,
   });
 
-  factory RecipeModel.fromJson(Map<String, dynamic> json) {
-    var ingredientsList = json['ingredients'] as List?;
-    var stepsList = json['steps'] as List?;
+  RecipeModel copyWith({
+    int? recipeId,
+    String? recipeName,
+    String? description,
+    int? cookingTimeMin,
+    String? imageUrl,
+    String? username,
+    String? createDate,
+    int? likeCount,
+    bool? isLiked,
+    bool? isPublic,
+    bool? isActive,
+    List<String>? tags,
+    List<CategoryModel>? categoryDetails,
+    List<TagModel>? tagDetails,
+    List<RecipeIngredient>? ingredients,
+    List<RecipeStep>? steps,
+  }) {
+    return RecipeModel(
+      recipeId: recipeId ?? this.recipeId,
+      recipeName: recipeName ?? this.recipeName,
+      description: description ?? this.description,
+      cookingTimeMin: cookingTimeMin ?? this.cookingTimeMin,
+      imageUrl: imageUrl ?? this.imageUrl,
+      username: username ?? this.username,
+      createDate: createDate ?? this.createDate,
+      likeCount: likeCount ?? this.likeCount,
+      isLiked: isLiked ?? this.isLiked,
+      isPublic: isPublic ?? this.isPublic,
+      isActive: isActive ?? this.isActive,
+      tags: tags ?? this.tags,
+      categoryDetails: categoryDetails ?? this.categoryDetails,
+      tagDetails: tagDetails ?? this.tagDetails,
+      ingredients: ingredients ?? this.ingredients,
+      steps: steps ?? this.steps,
+    );
+  }
 
-    List<String> parsedTags = [];
-    try {
-      if (json['tags'] != null && json['tags'] is List) {
-        parsedTags = (json['tags'] as List).map((t) => t.toString()).toList();
+  factory RecipeModel.fromJson(Map<String, dynamic> json) {
+    // Ultra-robust discovery
+    dynamic _findValue(List<String> keys) {
+      for (var k in keys) {
+        if (json[k] != null) return json[k];
       }
-    } catch (_) {
-      parsedTags = [];
+      for (var k in json.keys) {
+        for (var target in keys) {
+          if (k.toLowerCase().trim() == target.toLowerCase().trim() && json[k] != null) return json[k];
+        }
+      }
+      if (json['recipe'] is Map) {
+        final r = json['recipe'] as Map;
+        for (var k in keys) {
+          if (r[k] != null) return r[k];
+        }
+      }
+      return null;
+    }
+
+    final ingredientsRaw = _findValue(['ingredients', 'recipe_ingredients', 'ingredient_list', 'items', 'components', 'recipe_ingredient']);
+    final stepsRaw = _findValue(['steps', 'recipe_steps', 'instructions', 'method', 'directions', 'step_list', 'recipe_step']);
+    final catsRaw = _findValue(['categories', 'category', 'category_details', 'dish_type', 'type']);
+    final tagsRaw = _findValue(['tags', 'tag_list', 'tag_details', 'keywords']);
+
+    print('DEBUG: RecipeModel.fromJson - Parsing "${json['recipe_name'] ?? json['name']}"');
+    print('DEBUG: Found ingredients: ${ingredientsRaw is List ? (ingredientsRaw as List).length : (ingredientsRaw != null ? 1 : 0)}');
+    print('DEBUG: Found steps: ${stepsRaw is List ? (stepsRaw as List).length : (stepsRaw != null ? 1 : 0)}');
+
+    // Handle Categories (could be List, Map, or String)
+    List<CategoryModel>? parsedCats;
+    if (catsRaw is List) {
+      parsedCats = (catsRaw as List).map((c) => CategoryModel.fromJson(c is String ? {'category_name': c} : c)).toList();
+    } else if (catsRaw is Map) {
+      parsedCats = [CategoryModel.fromJson(catsRaw as Map<String, dynamic>)];
+    } else if (catsRaw is String) {
+      parsedCats = [CategoryModel(categoryId: 0, categoryName: catsRaw)];
+    }
+
+    // Handle Tags (could be List, Map, or String)
+    List<String> parsedTags = [];
+    List<TagModel>? parsedTagDetails;
+    if (tagsRaw is List) {
+      for (var t in tagsRaw as List) {
+        if (t is String) parsedTags.add(t);
+        else if (t is Map) {
+          parsedTagDetails ??= [];
+          parsedTagDetails.add(TagModel.fromJson(Map<String, dynamic>.from(t)));
+        }
+      }
+    } else if (tagsRaw is String) {
+      parsedTags = [tagsRaw];
     }
 
     return RecipeModel(
       recipeId: json['recipe_id'] ?? 0,
-      recipeName: json['recipe_name'] ?? '',
+      recipeName: json['recipe_name'] ?? json['name'] ?? json['title'] ?? json['label'] ?? '',
       description: json['description']?.toString() ?? '',
-      cookingTimeMin: (json['cooking_time_min'] as num?)?.toInt() ?? 0,
+      cookingTimeMin: _parseToInt(json['cooking_time_min'] ?? json['cooking_time'] ?? json['time'] ?? json['prep_time']),
       imageUrl: json['image_url'] ?? '',
       username: json['username'] ?? '',
       createDate: json['create_date']?.toString(),
-      likeCount: (json['like_count'] as num?)?.toInt() ?? 0,
+      likeCount: _parseToInt(json['like_count']),
       isLiked: json['is_liked'] == true,
       isPublic: json['is_public'] == true,
       isActive: json['is_active'] == true,
       tags: parsedTags,
-      categoryDetails: json['category_details'] == null 
-          ? null 
-          : (json['category_details'] as List).map((c) => CategoryModel.fromJson(c)).toList(),
-      tagDetails: json['tag_details'] == null 
-          ? null 
-          : (json['tag_details'] as List).map((t) => TagModel.fromJson(t)).toList(),
-      ingredients: ingredientsList?.map((i) => RecipeIngredient.fromJson(i)).toList(),
-      steps: stepsList?.map((s) => RecipeStep.fromJson(s)).toList(),
+      categoryDetails: parsedCats,
+      tagDetails: parsedTagDetails,
+      ingredients: (ingredientsRaw is List) 
+          ? ingredientsRaw.map((i) => RecipeIngredient.fromJson(i)).toList()
+          : (ingredientsRaw != null ? [RecipeIngredient.fromJson(ingredientsRaw)] : null),
+      steps: (stepsRaw is List) 
+          ? stepsRaw.map((s) => RecipeStep.fromJson(s)).toList()
+          : (stepsRaw != null ? [RecipeStep.fromJson(stepsRaw)] : null),
     );
+  }
+
+  static int _parseToInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
   }
 
   Map<String, dynamic> toJson() {
@@ -111,15 +197,37 @@ class RecipeIngredient {
     this.isMainIngredient = false,
   });
 
-  factory RecipeIngredient.fromJson(Map<String, dynamic> json) {
+  factory RecipeIngredient.fromJson(dynamic json) {
+    if (json is String) {
+      return RecipeIngredient(
+        ingredientId: 0,
+        ingredientName: json,
+        quantityValue: 0.0,
+        unitId: 0,
+        unitName: '',
+        isMainIngredient: true,
+      );
+    }
+    
+    if (json is! Map) {
+       return RecipeIngredient(ingredientId: 0, ingredientName: '', quantityValue: 0.0, unitId: 0, unitName: '');
+    }
+
     return RecipeIngredient(
       ingredientId: json['ingredient_id'] ?? 0,
-      ingredientName: json['ingredient_name'] ?? '',
-      quantityValue: (json['quantity'] as num?)?.toDouble() ?? 0.0,
+      ingredientName: json['ingredient_name'] ?? json['name'] ?? json['item'] ?? json['ingredient'] ?? json['item_name'] ?? '',
+      quantityValue: _parseToDouble(json['quantity'] ?? json['qty'] ?? json['amount']),
       unitId: json['unit_id'] ?? 0,
-      unitName: json['unit_name'] ?? '',
-      isMainIngredient: json['is_main_ingredient'] == true,
+      unitName: json['unit_name'] ?? json['unit'] ?? '',
+      isMainIngredient: json['is_main_ingredient'] == true || json['main'] == true || json['is_main'] == true,
     );
+  }
+
+  static double _parseToDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
   }
 
   Map<String, dynamic> toJson() {
@@ -143,11 +251,29 @@ class RecipeStep {
     required this.instruction,
   });
 
-  factory RecipeStep.fromJson(Map<String, dynamic> json) {
+  factory RecipeStep.fromJson(dynamic json) {
+    if (json is String) {
+      return RecipeStep(
+        stepNo: 0,
+        instruction: json,
+      );
+    }
+
+    if (json is! Map) {
+      return RecipeStep(stepNo: 0, instruction: '');
+    }
+
     return RecipeStep(
-      stepNo: json['step_no'] ?? 0,
-      instruction: json['instruction'] ?? '',
+      stepNo: _parseToInt(json['step_no'] ?? json['no'] ?? json['order']),
+      instruction: json['instruction'] ?? json['description'] ?? json['text'] ?? json['step'] ?? json['detail'] ?? '',
     );
+  }
+
+  static int _parseToInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
   }
 
   Map<String, dynamic> toJson() {
@@ -239,24 +365,32 @@ class DishAIResponse {
   final List<DishPrediction> top3;
   final List<Recipe>? recipes;
   final List<String> ingredients;
+  final List<TagModel>? tags;
+  final List<String>? predictedNames;
 
-  DishAIResponse({required this.top3, this.recipes, this.ingredients = const []});
+  DishAIResponse({
+    required this.top3, 
+    this.recipes, 
+    this.ingredients = const [],
+    this.tags,
+    this.predictedNames,
+  });
 
   factory DishAIResponse.fromJson(dynamic json) {
     try {
       if (json == null) {
-        return DishAIResponse(top3: [], ingredients: [], recipes: []);
+        return DishAIResponse(top3: [], ingredients: [], recipes: [], tags: [], predictedNames: []);
       }
 
       if (json is List) {
         final recipes = json.whereType<Map<String, dynamic>>()
             .map((e) => Recipe.fromJson(e)).toList();
         final predictions = recipes.map((r) => DishPrediction(className: r.title, confidence: 1.0)).toList();
-        return DishAIResponse(top3: predictions, recipes: recipes, ingredients: const []);
+        return DishAIResponse(top3: predictions, recipes: recipes, ingredients: const [], tags: [], predictedNames: []);
       }
 
       if (json is! Map<String, dynamic>) {
-        return DishAIResponse(top3: [], ingredients: [], recipes: []);
+        return DishAIResponse(top3: [], ingredients: [], recipes: [], tags: [], predictedNames: []);
       }
 
       Map<String, dynamic> target = json;
@@ -268,16 +402,22 @@ class DishAIResponse {
           final recipes = data.whereType<Map<String, dynamic>>()
               .map((e) => Recipe.fromJson(e)).toList();
           final predictions = recipes.map((r) => DishPrediction(className: r.title, confidence: 1.0)).toList();
-          return DishAIResponse(top3: predictions, recipes: recipes, ingredients: []);
+          return DishAIResponse(top3: predictions, recipes: recipes, ingredients: [], tags: [], predictedNames: []);
         }
       }
 
-      final list = (target['top_3'] ?? target['results'] ?? target['predictions']) as List?;
-      final predictions = list?.whereType<Map<String, dynamic>>()
-          .map((e) => DishPrediction.fromJson(e)).toList() ?? [];
+      final predictionsList = target['top_3'] ?? target['results'] ?? target['predictions'];
+      List<DishPrediction> predictions = [];
+      if (predictionsList != null && predictionsList is List) {
+        predictions = predictionsList.whereType<Map<String, dynamic>>()
+            .map((e) => DishPrediction.fromJson(e)).toList();
+      }
       
       final ingredientsList = (target['ingredients'] ?? target['items']) as List?;
-      final ingredients = ingredientsList?.map((e) => e.toString()).toList() ?? [];
+      List<String> ingredients = [];
+      if (ingredientsList != null && ingredientsList is List) {
+        ingredients = ingredientsList.map((e) => e.toString()).toList();
+      }
       
       final recipesList = (target['recipes'] ?? target['data']) as List?;
       List<Recipe>? recipes;
@@ -286,13 +426,28 @@ class DishAIResponse {
             .map((e) => Recipe.fromJson(e)).toList();
       }
 
+      final tagsList = target['tags'] as List?;
+      List<TagModel>? tags;
+      if (tagsList != null && tagsList is List) {
+        tags = tagsList.whereType<Map<String, dynamic>>()
+            .map((e) => TagModel.fromJson(e)).toList();
+      }
+
+      final predictedNamesList = target['predicted_name'] as List?;
+      List<String>? predictedNames;
+      if (predictedNamesList != null) {
+        predictedNames = predictedNamesList.map((e) => e.toString()).toList();
+      }
+
       return DishAIResponse(
         top3: predictions,
         recipes: recipes,
         ingredients: ingredients,
+        tags: tags,
+        predictedNames: predictedNames,
       );
     } catch (e) {
-      return DishAIResponse(top3: [], ingredients: [], recipes: []);
+      return DishAIResponse(top3: [], ingredients: [], recipes: [], tags: [], predictedNames: []);
     }
   }
 }

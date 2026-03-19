@@ -33,6 +33,7 @@ class _ScanFoodViewState extends State<_ScanFoodView> {
   File? _image;
   final ImagePicker _picker = ImagePicker();
   bool _isDishMode = true; // Default to Dish Prediction
+  bool _forceSearch = true; // Default to Force Search
 
   Future<void> _pickImage(BuildContext context, ImageSource source) async {
     final isGuest = context.read<AuthCubit>().isGuest;
@@ -62,7 +63,7 @@ class _ScanFoodViewState extends State<_ScanFoodView> {
             _image = result['file'] as File;
             _isDishMode = result['isDishMode'] as bool;
           });
-          context.read<ScanFoodCubit>().analyzeImage(XFile(_image!.path), isDishPrediction: _isDishMode);
+          context.read<ScanFoodCubit>().analyzeImage(XFile(_image!.path), isDishPrediction: _isDishMode, forceSearch: _forceSearch);
         }
         return;
       }
@@ -79,7 +80,7 @@ class _ScanFoodViewState extends State<_ScanFoodView> {
         setState(() {
           _image = File(pickedFile.path);
         });
-        context.read<ScanFoodCubit>().analyzeImage(pickedFile, isDishPrediction: _isDishMode);
+        context.read<ScanFoodCubit>().analyzeImage(pickedFile, isDishPrediction: _isDishMode, forceSearch: _forceSearch);
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -149,11 +150,19 @@ class _ScanFoodViewState extends State<_ScanFoodView> {
       body: BlocConsumer<ScanFoodCubit, ScanFoodState>(
         listener: (context, state) {
           if (state is ScanFoodSuccess) {
+            // Store reference before clearing for navigation
+            final imageToPass = _image;
+            
+            // Clear local image state so it's fresh when user returns
+            setState(() {
+              _image = null;
+            });
+
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => ScanResultScreen(
-                  image: _image!,
+                  image: imageToPass,
                   ingredients: state.ingredients,
                   dishResult: state.dishResponse,
                   isRecommendation: !_isDishMode,
@@ -256,6 +265,50 @@ class _ScanFoodViewState extends State<_ScanFoodView> {
                       ],
                     ),
                   ),
+
+                  // Force Search Toggle (Visible only in Dish Mode)
+                  if (_isDishMode)
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      margin: EdgeInsets.only(bottom: 24.h),
+                      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                      decoration: BoxDecoration(
+                        color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.white,
+                        borderRadius: BorderRadius.circular(15.scale),
+                        border: Border.all(
+                          color: _forceSearch ? AppTheme.brandPurple.withOpacity(0.3) : Colors.transparent,
+                          width: 1,
+                        ),
+                        boxShadow: isDarkMode ? [] : [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: SwitchListTile(
+                        title: Text(
+                          'ค้นหาอย่างละเอียด (Force Search)',
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w600,
+                            color: isDarkMode ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                        subtitle: Text(
+                          _forceSearch ? 'เปิด: ค้นหาสูตรที่ใกล้เคียงที่สุดแม้จะไม่มีในระบบ' : 'ปิด: ค้นหาเฉพาะสูตรที่มีในฐานข้อมูลเท่านั้น',
+                          style: TextStyle(fontSize: 11.sp, color: isDarkMode ? Colors.white70 : Colors.black54),
+                        ),
+                        value: _forceSearch,
+                        activeColor: AppTheme.brandPurple,
+                        onChanged: (val) => setState(() => _forceSearch = val),
+                        secondary: Icon(
+                          _forceSearch ? Icons.manage_search : Icons.search,
+                          color: _forceSearch ? AppTheme.brandPurple : Colors.grey,
+                        ),
+                      ),
+                    ),
 
                   // Preview Area
                   if (_image != null)

@@ -8,8 +8,10 @@ import '../../home/widgets/recipe_card.dart';
 import '../../home/models/food_model.dart';
 import '../../home/services/food_service.dart';
 
+import './ai_recipe_selection_screen.dart';
+
 class ScanResultScreen extends StatefulWidget {
-  final File image;
+  final File? image;
   final List<String> ingredients;
   final DishAIResponse? dishResult;
   final bool isRecommendation;
@@ -29,6 +31,7 @@ class ScanResultScreen extends StatefulWidget {
 class _ScanResultScreenState extends State<ScanResultScreen> {
   late List<String> _currentIngredients;
   DishAIResponse? _currentDishResult;
+  Set<int> _selectedTags = {};
   bool _isLoading = false;
   final RecipeService _recipeService = RecipeService();
 
@@ -54,14 +57,28 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
         return;
       }
 
-      final result = await _recipeService.getRecipeFromIngredient(_currentIngredients);
+      final tagIds = _selectedTags.toList();
+      final result = await _recipeService.getRecipeByIngredientAndTag(_currentIngredients, tagIds: tagIds);
+      
       if (mounted) {
         setState(() {
-          _currentDishResult = result;
+          if (result != null) {
+            // Filter out duplicate recipes by ID to prevent Hero tag crashes
+            final seenIds = <int>{};
+            final uniqueRecipes = result.recipes?.where((r) => seenIds.add(r.id)).toList();
+
+            _currentDishResult = DishAIResponse(
+              top3: result.top3,
+              recipes: uniqueRecipes,
+              ingredients: result.ingredients.isNotEmpty ? result.ingredients : _currentDishResult?.ingredients ?? [],
+              tags: (result.tags != null && result.tags!.isNotEmpty) ? result.tags : _currentDishResult?.tags,
+            );
+          }
           _isLoading = false;
         });
       }
     } catch (e) {
+      print('DEBUG: Error in _refreshRecipes: $e');
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -188,10 +205,12 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
                   height: 250.h,
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    image: DecorationImage(
-                      image: FileImage(widget.image),
+                    color: AppTheme.brandPurple.withOpacity(0.1),
+                    image: widget.image != null ? DecorationImage(
+                      image: FileImage(widget.image!),
                       fit: BoxFit.cover,
-                    ),
+                    ) : null,
+                    gradient: widget.image == null ? AppTheme.brandGradient : null,
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.2),
@@ -200,6 +219,24 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
                       ),
                     ],
                   ),
+                  child: widget.image == null ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.auto_awesome, color: Colors.white, size: 64.scale),
+                        SizedBox(height: 12.h),
+                        Text(
+                          'AI GENERATED RECIPE',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ) : null,
                 ),
                 
                 Padding(
@@ -273,34 +310,123 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
                             shadowColor: Colors.black12,
                           )).toList(),
                         ),
-                        const Divider(height: 40),
-                      ],
+                        SizedBox(height: 16.h),
+                        const Divider(height: 1),
+                        SizedBox(height: 24.h),
+
+                      // Cooking Methods (Tags) Section
+                        if (_currentDishResult?.tags != null && _currentDishResult!.tags!.isNotEmpty) ...[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'วิธีการปรุงที่แนะนำ:',
+                                style: TextStyle(
+                                  fontSize: 18.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDarkMode ? Colors.white : AppTheme.brandBlue,
+                                ),
+                              ),
+                              if (_selectedTags.isNotEmpty)
+                                TextButton(
+                                  onPressed: () => setState(() => _selectedTags.clear()),
+                                  child: Text('ล้างตัวกรอง', style: TextStyle(color: Colors.red, fontSize: 13.sp)),
+                                ),
+                            ],
+                          ),
+                          SizedBox(height: 12.h),
+                          Wrap(
+                            spacing: 8.w,
+                            runSpacing: 10.h,
+                            children: _currentDishResult!.tags!.map((tag) {
+                              final isSelected = _selectedTags.contains(tag.tagId);
+                              return InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    if (isSelected) {
+                                      _selectedTags.remove(tag.tagId);
+                                    } else {
+                                      _selectedTags.add(tag.tagId);
+                                    }
+                                  });
+                                  _refreshRecipes(); // Call API when tag is toggled
+                                },
+                                borderRadius: BorderRadius.circular(20.scale),
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                                  decoration: BoxDecoration(
+                                    gradient: isSelected ? AppTheme.brandGradient : null,
+                                    color: isSelected ? null : (isDarkMode ? Colors.white.withOpacity(0.05) : Colors.white),
+                                    borderRadius: BorderRadius.circular(20.scale),
+                                    border: Border.all(
+                                      color: isSelected ? Colors.transparent : AppTheme.brandPurple.withOpacity(0.3),
+                                      width: 1.scale,
+                                    ),
+                                    boxShadow: isSelected ? [
+                                      BoxShadow(
+                                        color: AppTheme.brandPurple.withOpacity(0.3),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      )
+                                    ] : null,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (isSelected) 
+                                        Padding(
+                                          padding: EdgeInsets.only(right: 4.w),
+                                          child: Icon(Icons.check, size: 14.scale, color: Colors.white),
+                                        ),
+                                      Text(
+                                        tag.tagName,
+                                        style: TextStyle(
+                                          fontSize: 14.sp,
+                                          color: isSelected ? Colors.white : (isDarkMode ? Colors.white : AppTheme.brandPurple),
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                            SizedBox(height: 24.h),
+                            const Divider(height: 1),
+                            SizedBox(height: 24.h),
+                          ],
+                        ],
 
                       // Recipes Section
                       if (_currentDishResult != null) ...[
                         if (_currentDishResult!.recipes != null && _currentDishResult!.recipes!.isNotEmpty) ...[
-                          Text(
-                            widget.isRecommendation ? 'เมนูที่แนะนำสำหรับคุณ ✨' : 'สูตรอาหารใกล้เคียง...',
-                            style: TextStyle(
-                              fontSize: 19.sp,
-                              fontWeight: FontWeight.bold,
-                              color: isDarkMode ? Colors.white : AppTheme.brandPurple,
-                            ),
-                          ),
-                          SizedBox(height: 16.h),
                           Column(
-                            children: _currentDishResult!.recipes!.asMap().entries.map((entry) {
-                              final index = entry.key;
-                              final recipe = entry.value;
-                              return Padding(
-                                padding: EdgeInsets.only(bottom: 12.h),
-                                child: RecipeCard(
-                                  recipe: recipe, 
-                                  index: index,
-                                  isHorizontal: true,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.isRecommendation ? 'เมนูที่แนะนำสำหรับคุณ ✨' : 'สูตรอาหารใกล้เคียง...',
+                                style: TextStyle(
+                                  fontSize: 19.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDarkMode ? Colors.white : AppTheme.brandPurple,
                                 ),
-                              );
-                            }).toList(),
+                              ),
+                              SizedBox(height: 16.h),
+                              ..._currentDishResult!.recipes!.asMap().entries.map((entry) {
+                                final index = entry.key;
+                                final recipe = entry.value;
+                                return Padding(
+                                  padding: EdgeInsets.only(bottom: 12.h),
+                                  child: RecipeCard(
+                                    key: ValueKey('recipe-${recipe.id}-${index}'),
+                                    recipe: recipe, 
+                                    index: index,
+                                    isHorizontal: true,
+                                  ),
+                                );
+                              }).toList(),
+                            ],
                           ),
                         ] else if (!_isLoading) ...[
                           Center(
@@ -316,14 +442,42 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
                                   ),
                                 ),
                                 SizedBox(height: 16.h),
-                                Text(
-                                  'ไม่พบสูตรอาหารที่เหมาะสม 😅',
-                                  style: TextStyle(
-                                    fontSize: 17.sp, 
-                                    fontWeight: FontWeight.bold, 
-                                    color: Colors.grey,
+                                  Text(
+                                    'ไม่พบสูตรอาหารที่เหมาะสม 😅',
+                                    style: TextStyle(
+                                      fontSize: 17.sp, 
+                                      fontWeight: FontWeight.bold, 
+                                      color: Colors.grey,
+                                    ),
                                   ),
-                                ),
+                                  if (_currentDishResult?.predictedNames != null && _currentDishResult!.predictedNames!.isNotEmpty) ...[
+                                    SizedBox(height: 24.h),
+                                    Text(
+                                      'แต่เราพบเมนูที่ใกล้เคียงจาก AI!',
+                                      style: TextStyle(fontSize: 14.sp, color: AppTheme.brandPurple),
+                                    ),
+                                    SizedBox(height: 12.h),
+                                    ElevatedButton.icon(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => AIRecipeSelectionScreen(
+                                              predictedNames: _currentDishResult!.predictedNames!,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(Icons.auto_awesome, color: Colors.white),
+                                      label: const Text('สร้างสูตรอาหารใหม่ผ่าน AI ✨'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppTheme.brandPurple,
+                                        foregroundColor: Colors.white,
+                                        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.scale)),
+                                      ),
+                                    ),
+                                  ],
                               ],
                             ),
                           ),

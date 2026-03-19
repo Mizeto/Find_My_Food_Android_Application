@@ -2,8 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
-import '../models/food_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../data/models/recipe_model.dart';
+import '../models/food_model.dart';
 
 class RecipeService {
   static final String baseUrl = 'http://45.91.134.142'; // Local server URL
@@ -278,18 +279,27 @@ class RecipeService {
     }
   }
 
-  // GET /recipe/getRecipeFromIngredient
-  Future<DishAIResponse?> getRecipeFromIngredient(List<String> ingredients) async {
+  // GET /recipe/getRecipeByIngredientAndTag
+  Future<DishAIResponse?> getRecipeByIngredientAndTag(List<String> ingredients, {List<int>? tagIds}) async {
     try {
       final token = await _getToken();
-      // Use a manual query string to repeat the key for each ingredient
+      
       final queryBuffer = StringBuffer();
+      // Add ingredients
       for (int i = 0; i < ingredients.length; i++) {
         queryBuffer.write('ingredient_list=${Uri.encodeComponent(ingredients[i])}');
         if (i < ingredients.length - 1) queryBuffer.write('&');
       }
       
-      final url = Uri.parse('$baseUrl/recipe/getRecipeFromIngredient?${queryBuffer.toString()}');
+      // Add tags if present
+      if (tagIds != null && tagIds.isNotEmpty) {
+        for (final tagId in tagIds) {
+          if (queryBuffer.isNotEmpty) queryBuffer.write('&');
+          queryBuffer.write('tag_list=${tagId}');
+        }
+      }
+      
+      final url = Uri.parse('$baseUrl/recipe/getRecipeByIngredientAndTag?${queryBuffer.toString()}');
       
       print('DEBUG: Fetching recipes from: $url');
 
@@ -302,20 +312,17 @@ class RecipeService {
       ).timeout(const Duration(seconds: 30));
 
       print('DEBUG: Response Status: ${response.statusCode}');
-      print('DEBUG: Body length: ${response.bodyBytes.length}');
 
       if (response.statusCode == 200) {
         final decodedBody = utf8.decode(response.bodyBytes);
-        print('DEBUG: Body decoded');
         final dynamic jsonResponse = jsonDecode(decodedBody);
-        print('DEBUG: JSON parsed');
         return DishAIResponse.fromJson(jsonResponse);
       } else {
         print('DEBUG: Error status ${response.statusCode}');
         return null;
       }
     } catch (e) {
-      print('DEBUG: Exception in getRecipeFromIngredient: $e');
+      print('DEBUG: Exception in getRecipeByIngredientAndTag: $e');
       return null;
     }
   }
@@ -557,7 +564,7 @@ class RecipeService {
   }
 
   // POST /recipeAI/analyzeFoodImage - Predict Dish Name
-  Future<DishAIResponse?> predictDishAI(String filePath) async {
+  Future<DishAIResponse?> predictDishAI(String filePath, {bool forceSearch = true}) async {
     try {
       print('Predicting dish with AI: $baseUrl/recipeAI/analyzeFoodImage');
       final token = await _getToken();
@@ -573,6 +580,7 @@ class RecipeService {
       }
 
       request.files.add(await http.MultipartFile.fromPath('file', filePath));
+      request.fields['force_search'] = forceSearch.toString();
 
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
@@ -610,6 +618,48 @@ class RecipeService {
       rethrow;
     }
   }
+
+  // POST /recipeAI/generateNewRecipeByAI
+  Future<List<RecipeModel>> generateNewRecipeByAI(String recipeName, {String? prompt}) async {
+    try {
+      print('Generating new recipe with AI: $baseUrl/recipeAI/generateNewRecipeByAI');
+      final token = await _getToken();
+      final headers = {
+        'Content-Type': 'application/json',
+        'accept': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      };
+
+      final body = jsonEncode({
+        'recipe_name': recipeName,
+        'prompt': prompt ?? '',
+      });
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/recipeAI/generateNewRecipeByAI'),
+        headers: headers,
+        body: body,
+      ).timeout(const Duration(seconds: 90));
+
+      print('AI Gen Response Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final decodedBody = utf8.decode(response.bodyBytes);
+        final Map<String, dynamic> jsonResponse = jsonDecode(decodedBody);
+        
+        if (jsonResponse['status'] == 'success') {
+          final List<dynamic> data = jsonResponse['data'];
+          print('DEBUG: AI Recipe Data: $data');
+          return data.map((json) => RecipeModel.fromJson(json)).toList();
+        }
+      }
+      return [];
+    } catch (e) {
+      print('Error calling generateNewRecipeByAI: $e');
+      return [];
+    }
+  }
+
 
   // POST /recipeAI/analyzeIngredientImage - Identify Ingredients/Recommend Recipes from Image
   Future<DishAIResponse?> analyzeIngredientImage(String filePath) async {

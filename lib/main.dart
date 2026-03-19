@@ -70,6 +70,12 @@ class MyApp extends StatelessWidget {
 
         // Navigation Cubit
         BlocProvider(create: (context) => NavigationCubit()),
+
+        // Home Bloc - Move to global so all screens can access it
+        BlocProvider(
+          create: (context) => 
+              HomeBloc(repository: context.read<RecipeRepository>()),
+        ),
       ],
       child: BlocBuilder<ThemeCubit, bool>(
         builder: (context, isDarkMode) {
@@ -113,6 +119,10 @@ class AuthWrapper extends StatelessWidget {
         context.read<NavigationCubit>().setTab(0);
         // Refresh notifications upon authentication
         context.read<NotificationBloc>().add(FetchNotifications());
+        // Load Home Recipes upon authentication
+        if (state is AuthAuthenticated) {
+          context.read<HomeBloc>().add(LoadHomeRecipes(isGuest: state.user.isGuest));
+        }
       },
       child: BlocBuilder<AuthCubit, AuthState>(
         builder: (context, state) {
@@ -121,13 +131,7 @@ class AuthWrapper extends StatelessWidget {
           }
 
           if (state is AuthAuthenticated) {
-            final isGuest = state.user.isGuest;
-            return BlocProvider(
-              create: (context) =>
-                  HomeBloc(repository: context.read<RecipeRepository>())
-                    ..add(LoadHomeRecipes(isGuest: isGuest)),
-              child: const MainNavigationScreen(),
-            );
+            return const MainNavigationScreen();
           }
 
           if (state is AuthGoogleRegistrationRequired) {

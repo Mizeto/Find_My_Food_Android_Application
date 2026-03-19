@@ -4,7 +4,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_cubit.dart';
+import '../../../core/navigation/navigation_cubit.dart';
 import '../../../core/utils/responsive_helper.dart';
+import '../../auth/cubit/auth_cubit.dart';
+import '../bloc/home_bloc.dart';
 import '../services/food_service.dart';
 import '../models/food_model.dart';
 
@@ -59,9 +62,13 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
   void _initializeForEdit() {
     if (widget.initialRecipe != null) {
       final recipe = widget.initialRecipe!;
+      print('DEBUG: Initializing AddFoodScreen with recipe: ${recipe.recipeName}');
+      print('DEBUG: Ingredients count: ${recipe.ingredients?.length ?? 0}');
+      print('DEBUG: Steps count: ${recipe.steps?.length ?? 0}');
+
       _nameController.text = recipe.recipeName;
       _descriptionController.text = recipe.description;
-      _timeController.text = recipe.cookingTimeMin.toString();
+      _timeController.text = recipe.cookingTimeMin > 0 ? recipe.cookingTimeMin.toString() : '';
       _isPublic = recipe.isPublic;
       
       if (recipe.imageUrl.isNotEmpty) {
@@ -70,17 +77,15 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
         }
       }
 
-      // Categories
+      // Initial ID matching (if IDs already present)
       if (recipe.categoryDetails != null) {
         for (var cat in recipe.categoryDetails!) {
-          _selectedCategoryIds.add(cat.categoryId);
+          if (cat.categoryId != 0) _selectedCategoryIds.add(cat.categoryId);
         }
       }
-
-      // Tags
       if (recipe.tagDetails != null) {
         for (var tag in recipe.tagDetails!) {
-          _selectedTagIds.add(tag.tagId);
+          if (tag.tagId != 0) _selectedTagIds.add(tag.tagId);
         }
       }
 
@@ -88,26 +93,105 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
       if (recipe.ingredients != null && recipe.ingredients!.isNotEmpty) {
         _ingredients = recipe.ingredients!.map((i) => <String, dynamic>{
           'name': i.ingredientName,
-          'qty': i.quantityValue.toString().replaceAll(RegExp(r'\.0$'), ''),
-          'unit_id': i.unitId,
+          'qty': i.quantityValue > 0 ? i.quantityValue.toString().replaceAll(RegExp(r'\.0$'), '') : '1',
+          'unit_id': i.unitId != 0 ? i.unitId : null,
           'id': i.ingredientId,
           'main': i.isMainIngredient,
         }).toList();
+      } else {
+        // Ensure at least one empty row if AI failed
+        if (_ingredients.isEmpty) {
+           _ingredients = [{'name': '', 'qty': '1', 'unit_id': null, 'id': 0, 'main': true}];
+        }
       }
 
       // Steps
       if (recipe.steps != null && recipe.steps!.isNotEmpty) {
         _steps = recipe.steps!.map((s) => s.instruction).toList();
+      } else {
+         if (_steps.isEmpty) _steps = [''];
+      }
+      
+      // Safety setState (though usually not needed in initState)
+      if (mounted) setState(() {});
+      
+      // If we already have categories/tags loaded (unlikely during initState, but possible on hot reload)
+      if (_availableCategories.isNotEmpty || _availableTags.isNotEmpty) {
+        _matchAiDataToDb();
       }
     }
+  }
+
+  void _matchAiDataToDb() {
+    if (widget.initialRecipe == null) return;
+    final recipe = widget.initialRecipe!;
+
+    setState(() {
+      // 1. Match Categories by Name
+      if (recipe.categoryDetails != null) {
+        for (var aiCat in recipe.categoryDetails!) {
+          if (aiCat.categoryId == 0) {
+            final match = _availableCategories.firstWhere(
+              (c) => c.categoryName.trim() == aiCat.categoryName.trim(), 
+              orElse: () => CategoryModel(categoryId: -1, categoryName: '')
+            );
+            if (match.categoryId != -1) {
+              _selectedCategoryIds.add(match.categoryId);
+            }
+          }
+        }
+      }
+
+      // 2. Match Tags by Name (from tagDetails or tags list)
+      final allAiTagNames = <String>{};
+      if (recipe.tagDetails != null) {
+        allAiTagNames.addAll(recipe.tagDetails!.map((t) => t.tagName.trim()));
+      }
+      if (recipe.tags != null) {
+        allAiTagNames.addAll(recipe.tags!.map((t) => t.trim()));
+      }
+
+      for (var name in allAiTagNames) {
+        final match = _availableTags.firstWhere(
+          (t) => t.tagName.trim() == name,
+          orElse: () => TagModel(tagId: -1, tagName: '')
+        );
+        if (match.tagId != -1) {
+          _selectedTagIds.add(match.tagId);
+        }
+      }
+
+      // 3. Match Ingredient Units by Name
+      for (var item in _ingredients) {
+        if (item['unit_id'] == null) {
+          // Attempt to find unitName from recipe model if it exists
+          final aiIng = recipe.ingredients?.firstWhere((i) => i.ingredientName == item['name'], orElse: () => recipe.ingredients!.first);
+          if (aiIng != null && aiIng.unitName.isNotEmpty) {
+             final unitMatch = _units.firstWhere(
+               (u) => u.unitName.trim() == aiIng.unitName.trim(),
+               orElse: () => UnitModel(unitId: -1, unitName: '')
+             );
+             if (unitMatch.unitId != -1) {
+               item['unit_id'] = unitMatch.unitId;
+             }
+          }
+        }
+      }
+    });
   }
 
   Future<void> _loadUnits() async {
     try {
       final units = await _recipeService.getAllUnits();
-      setState(() {
-        _units = units;
-      });
+      if (mounted) {
+        setState(() {
+          _units = units;
+        });
+        
+        if (widget.initialRecipe != null) {
+          _matchAiDataToDb();
+        }
+      }
     } catch (e) {
       print('Error loading units: $e');
     }
@@ -122,6 +206,11 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
           _availableCategories = categories;
           _availableTags = tags;
         });
+        
+        // After loading, attempt to match AI recommendations
+        if (widget.initialRecipe != null) {
+          _matchAiDataToDb();
+        }
       }
     } catch (e) {
       print('Error loading categories/tags: $e');
@@ -283,7 +372,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
 
       // 3. Create or Update Recipe
       bool success = false;
-      if (widget.initialRecipe != null) {
+      if (widget.initialRecipe != null && widget.initialRecipe!.recipeId != 0) {
         // Update Mode
         final recipeId = widget.initialRecipe!.recipeId;
         
@@ -313,11 +402,20 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(widget.initialRecipe != null ? 'อัปเดตสูตรอาหารเรียบร้อย!' : 'บันทึกสูตรอาหารเรียบร้อย!'), 
+              content: Text((widget.initialRecipe != null && widget.initialRecipe!.recipeId != 0) ? 'อัปเดตสูตรอาหารเรียบร้อย!' : 'บันทึกสูตรอาหารเรียบร้อย!'), 
               backgroundColor: AppTheme.primaryGreen
             ),
           );
-          Navigator.pop(context, true);
+
+          // Return to Home tab (index 0)
+          context.read<NavigationCubit>().setTab(0);
+          
+          // Refresh Home recipes so the new one shows up
+          final isGuest = context.read<AuthCubit>().isGuest;
+          context.read<HomeBloc>().add(LoadHomeRecipes(isGuest: isGuest));
+          
+          // Pop back to the MainNavigationScreen root
+          Navigator.of(context).popUntil((route) => route.isFirst);
         } else {
           _showErrorDialog(widget.initialRecipe != null ? 'อัปเดตไม่สำเร็จ' : 'บันทึกไม่สำเร็จ');
         }
@@ -448,6 +546,18 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
           ),
         ),
         foregroundColor: Colors.white,
+        actions: [
+          if (widget.initialRecipe != null && widget.initialRecipe!.recipeId == 0)
+            IconButton(
+              icon: const Icon(Icons.bug_report, color: Colors.white),
+              onPressed: () {
+                print('DEBUG: Initial Recipe Data: ${widget.initialRecipe!.toJson()}');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Logged recipe data to console!'))
+                );
+              },
+            ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(20.scale),
@@ -676,7 +786,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                 child: ElevatedButton(
                     onPressed: _isLoading ? null : _submitpost,
                     style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryOrange, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.scale))),
-                    child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : Text(widget.initialRecipe != null ? 'อัปเดตสูตรอาหาร' : 'บันทึกสูตรอาหาร', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
+                    child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : Text((widget.initialRecipe != null && widget.initialRecipe!.recipeId != 0) ? 'อัปเดตสูตรอาหาร' : 'บันทึกสูตรอาหาร', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],

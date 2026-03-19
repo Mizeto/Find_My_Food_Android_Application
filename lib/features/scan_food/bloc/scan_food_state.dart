@@ -11,14 +11,22 @@ class ScanFoodInitial extends ScanFoodState {}
 
 class ScanFoodLoading extends ScanFoodState {}
 
+
 class ScanFoodSuccess extends ScanFoodState {
   final List<String> ingredients;
+  final List<String> predictedNames;
   final DishAIResponse? dishResponse;
+  final RecipeModel? recipeModel;
 
-  const ScanFoodSuccess({this.ingredients = const [], this.dishResponse});
+  const ScanFoodSuccess({
+    this.ingredients = const [], 
+    this.predictedNames = const [],
+    this.dishResponse,
+    this.recipeModel,
+  });
 
   @override
-  List<Object?> get props => [ingredients, dishResponse];
+  List<Object?> get props => [ingredients, predictedNames, dishResponse, recipeModel];
 }
 
 class ScanFoodError extends ScanFoodState {
