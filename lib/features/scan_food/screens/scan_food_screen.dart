@@ -266,46 +266,74 @@ class _ScanFoodViewState extends State<_ScanFoodView> {
                     ),
                   ),
 
-                  // Force Search Toggle (Visible only in Dish Mode)
+                  // Force Search Toggle (Visible only in Dish Mode) - Compact Pill Style
                   if (_isDishMode)
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      margin: EdgeInsets.only(bottom: 24.h),
-                      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                      decoration: BoxDecoration(
-                        color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.white,
-                        borderRadius: BorderRadius.circular(15.scale),
-                        border: Border.all(
-                          color: _forceSearch ? AppTheme.brandPurple.withOpacity(0.3) : Colors.transparent,
-                          width: 1,
-                        ),
-                        boxShadow: isDarkMode ? [] : [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
+                    Padding(
+                      padding: EdgeInsets.only(bottom: 24.h),
+                      child: Center(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
+                          decoration: BoxDecoration(
+                            color: isDarkMode ? Colors.white.withOpacity(0.08) : Colors.white,
+                            borderRadius: BorderRadius.circular(30.scale),
+                            border: Border.all(
+                              color: _forceSearch ? AppTheme.brandPurple.withOpacity(0.5) : Colors.grey.withOpacity(0.2),
+                              width: 1.2,
+                            ),
+                            boxShadow: isDarkMode ? [] : [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: SwitchListTile(
-                        title: Text(
-                          'ค้นหาอย่างละเอียด (Force Search)',
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w600,
-                            color: isDarkMode ? Colors.white : Colors.black87,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _forceSearch ? Icons.auto_awesome : Icons.search,
+                                size: 18.scale,
+                                color: _forceSearch ? AppTheme.brandPurple : Colors.grey,
+                              ),
+                              SizedBox(width: 8.w),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'ค้นหาอย่างละเอียด (Force Search)',
+                                    style: TextStyle(
+                                      fontSize: 12.sp,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDarkMode ? Colors.white : Colors.black87,
+                                    ),
+                                  ),
+                                  Text(
+                                    _forceSearch ? 'เจาะจงสูตร AI 🤖' : 'หาในระบบปกติ 🔍',
+                                    style: TextStyle(
+                                      fontSize: 9.sp,
+                                      color: isDarkMode ? Colors.white54 : Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(width: 12.w),
+                              SizedBox(
+                                height: 28.h,
+                                width: 40.w,
+                                child: Transform.scale(
+                                  scale: 0.7,
+                                  child: Switch(
+                                    value: _forceSearch,
+                                    activeColor: AppTheme.brandPurple,
+                                    onChanged: (val) => setState(() => _forceSearch = val),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        subtitle: Text(
-                          _forceSearch ? 'เปิด: ค้นหาสูตรที่ใกล้เคียงที่สุดแม้จะไม่มีในระบบ' : 'ปิด: ค้นหาเฉพาะสูตรที่มีในฐานข้อมูลเท่านั้น',
-                          style: TextStyle(fontSize: 11.sp, color: isDarkMode ? Colors.white70 : Colors.black54),
-                        ),
-                        value: _forceSearch,
-                        activeColor: AppTheme.brandPurple,
-                        onChanged: (val) => setState(() => _forceSearch = val),
-                        secondary: Icon(
-                          _forceSearch ? Icons.manage_search : Icons.search,
-                          color: _forceSearch ? AppTheme.brandPurple : Colors.grey,
                         ),
                       ),
                     ),

@@ -25,6 +25,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final RecipeService _recipeService = RecipeService();
   bool _isExpanded = false;
 
   @override
@@ -311,6 +312,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Gen Z Recommendations (Horizontal)
+                      if (state.recommendedGenZ.isNotEmpty)
+                        _buildHorizontalSection(
+                          context: context,
+                          title: 'เมนูสำหรับ Gen Z 🎧✨',
+                          recipes: state.recommendedGenZ,
+                          isDarkMode: isDarkMode,
+                        ),
+
                       // 1. Recommended for You (Horizontal) - Hide for guests and when filtering
                       if (!isGuest && !isFiltering && state.recommendedForYou.isNotEmpty)
                         _buildHorizontalSection(
@@ -448,6 +458,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 12),
               ],
+
               GestureDetector(
                 onTap: () => setState(() => _isExpanded = !_isExpanded),
                 child: Container(
@@ -863,6 +874,191 @@ class _HomeScreenState extends State<HomeScreen> {
               final recipe = recipes[index];
               return _RecommendationCard(recipe: recipe, isDarkMode: isDarkMode);
             },
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showAiPromptModal(BuildContext context) {
+    final nameController = TextEditingController();
+    final promptController = TextEditingController();
+    final isDarkMode = context.read<ThemeCubit>().isDarkMode;
+    final loadingNotifier = ValueNotifier<bool>(false);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
+          top: 24.h,
+          left: 24.w,
+          right: 24.w,
+        ),
+        decoration: BoxDecoration(
+          color: isDarkMode ? const Color(0xFF1A1A2E) : Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(30.scale)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40.w,
+                height: 4.h,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2.scale),
+                ),
+              ),
+            ),
+            SizedBox(height: 24.h),
+            Row(
+              children: [
+                Icon(Icons.auto_awesome, color: Colors.amber[700], size: 28.scale),
+                SizedBox(width: 12.w),
+                Text(
+                  'สร้างสูตรอาหารด้วย AI ✨',
+                  style: TextStyle(
+                    fontSize: 20.sp,
+                    fontWeight: FontWeight.bold,
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              'บอกชื่อเมนูหรือสไตล์ที่คุณอยากทาน\nแล้วให้ AI ช่วยรังสรรค์สูตรพิเศษให้คุณครับ! ✍️🥘',
+              style: TextStyle(
+                fontSize: 14.sp,
+                color: isDarkMode ? Colors.white70 : Colors.grey[600],
+                height: 1.5,
+              ),
+            ),
+            SizedBox(height: 24.h),
+            _buildPromptField(
+              controller: nameController,
+              label: 'ชื่อเมนูที่ต้องการ',
+              hint: 'เช่น ข้าวผัดไข่เยี่ยวม้ากะเพรากรอบ',
+              icon: Icons.restaurant,
+              isDarkMode: isDarkMode,
+            ),
+            SizedBox(height: 16.h),
+            _buildPromptField(
+              controller: promptController,
+              label: 'สไตล์หรือรายละเอียดเพิ่มเติม (Prompt)',
+              hint: 'เช่น ขอแบบรสจัดจ้าน, สำหรับ 2 ท่าน, ใช้หม้อทอดไร้น้ำมัน...',
+              icon: Icons.edit_note,
+              maxLines: 3,
+              isDarkMode: isDarkMode,
+            ),
+            SizedBox(height: 32.h),
+            ValueListenableBuilder<bool>(
+              valueListenable: loadingNotifier,
+              builder: (context, isLoading, child) {
+                return SizedBox(
+                  width: double.infinity,
+                  height: 56.h,
+                  child: ElevatedButton(
+                    onPressed: isLoading ? null : () async {
+                      if (nameController.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('กรุณาระบุชื่อเมนูก่อนนะครับ!'))
+                        );
+                        return;
+                      }
+
+                      loadingNotifier.value = true;
+                      
+                      try {
+                        final recipes = await _recipeService.generateNewRecipeByAI(
+                          nameController.text.trim(),
+                          prompt: promptController.text.trim(),
+                        );
+                        
+                        if (context.mounted) {
+                          if (recipes.isNotEmpty) {
+                            Navigator.pop(context); // Close modal
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => AddFoodScreen(initialRecipe: recipes.first),
+                              ),
+                            );
+                          } else {
+                            loadingNotifier.value = false;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('ขออภัยครับ AI ไม่สามารถสร้างสูตรได้ในขณะนี้'))
+                            );
+                          }
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          loadingNotifier.value = false;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('เกิดข้อผิดพลาด: $e'))
+                          );
+                        }
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.brandPurple,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.scale)),
+                      elevation: 4,
+                    ),
+                    child: isLoading 
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : Text('สร้างสูตรอาหารเลย ✨', style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold)),
+                  ),
+                );
+              }
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPromptField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    int maxLines = 1,
+    required bool isDarkMode,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13.sp,
+            fontWeight: FontWeight.w600,
+            color: isDarkMode ? Colors.white70 : Colors.black54,
+          ),
+        ),
+        SizedBox(height: 8.h),
+        TextField(
+          controller: controller,
+          maxLines: maxLines,
+          style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87, fontSize: 14.sp),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13.sp),
+            prefixIcon: Icon(icon, color: AppTheme.brandPurple, size: 20.scale),
+            filled: true,
+            fillColor: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.grey[100],
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.scale),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
           ),
         ),
       ],

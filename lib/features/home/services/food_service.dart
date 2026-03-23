@@ -212,18 +212,20 @@ class RecipeService {
   }
 
   // GET /recipe/getSearchRecipeFilterOption
-  Future<List<RecipeModel>> getSearchRecipeFilterOption({
+  Future<dynamic> getSearchRecipeFilterOption({
     List<int>? categoryIds,
     List<int>? tagIds,
   }) async {
     try {
       final queryBuffer = StringBuffer();
+      // Add Categories
       if (categoryIds != null && categoryIds.isNotEmpty) {
         for (final id in categoryIds) {
           if (queryBuffer.isNotEmpty) queryBuffer.write('&');
           queryBuffer.write('categories=${Uri.encodeComponent(id.toString())}');
         }
       }
+      // Add Tags
       if (tagIds != null && tagIds.isNotEmpty) {
         for (final id in tagIds) {
           if (queryBuffer.isNotEmpty) queryBuffer.write('&');
@@ -244,15 +246,21 @@ class RecipeService {
           utf8.decode(response.bodyBytes),
         );
         if (jsonResponse['status'] == 'success') {
-          final List<dynamic> data = jsonResponse['data'];
-          return data.map((json) => RecipeModel.fromJson(json)).toList();
+          final dynamic data = jsonResponse['data'];
+          if (data is Map<String, dynamic>) {
+             // Handle Map with multiple lists (recipes, gen_z_recipes, etc.)
+             return data;
+          } else if (data is List) {
+             // Fallback for old list behavior
+             return data.map((json) => RecipeModel.fromJson(json)).toList();
+          }
         }
-        return [];
+        return <RecipeModel>[];
       } else {
         throw Exception('Failed to search with filter: ${response.statusCode}');
       }
     } catch (e) {
-      throw Exception('Connection error: $e');
+      throw Exception('Connection error in getSearchRecipeFilterOption: $e');
     }
   }
 
@@ -648,9 +656,23 @@ class RecipeService {
         final Map<String, dynamic> jsonResponse = jsonDecode(decodedBody);
         
         if (jsonResponse['status'] == 'success') {
-          final List<dynamic> data = jsonResponse['data'];
-          print('DEBUG: AI Recipe Data: $data');
-          return data.map((json) => RecipeModel.fromJson(json)).toList();
+          final dynamic dataRaw = jsonResponse['data'];
+          print('DEBUG: AI Recipe Data Type: ${dataRaw.runtimeType}');
+          
+          if (dataRaw is List) {
+            return dataRaw.map((json) => RecipeModel.fromJson(json)).toList();
+          } else if (dataRaw is Map<String, dynamic>) {
+            // Check if it's a container with a recipes list (like in analyzeFoodImage)
+            final recipesList = dataRaw['recipes'] ?? dataRaw['data'] ?? dataRaw['recipe_list'];
+            if (recipesList is List) {
+               return recipesList.map((json) => RecipeModel.fromJson(json)).toList();
+            }
+            // Otherwise, it might be the recipe itself
+            return [RecipeModel.fromJson(dataRaw)];
+          } else if (dataRaw == null) {
+            print('DEBUG: AI returned null data, but success status.');
+            return [];
+          }
         }
       }
       return [];

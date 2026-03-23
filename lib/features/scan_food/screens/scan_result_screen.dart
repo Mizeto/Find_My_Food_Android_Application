@@ -426,6 +426,12 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
                                   ),
                                 );
                               }).toList(),
+                              
+                              // New: AI Selection for unsatisfied users
+                              if (_currentDishResult?.predictedNames != null && _currentDishResult!.predictedNames!.isNotEmpty) ...[
+                                SizedBox(height: 12.h),
+                                _buildAINewRecipeSection(hasRecipes: true),
+                              ],
                             ],
                           ),
                         ] else if (!_isLoading) ...[
@@ -452,31 +458,7 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
                                   ),
                                   if (_currentDishResult?.predictedNames != null && _currentDishResult!.predictedNames!.isNotEmpty) ...[
                                     SizedBox(height: 24.h),
-                                    Text(
-                                      'แต่เราพบเมนูที่ใกล้เคียงจาก AI!',
-                                      style: TextStyle(fontSize: 14.sp, color: AppTheme.brandPurple),
-                                    ),
-                                    SizedBox(height: 12.h),
-                                    ElevatedButton.icon(
-                                      onPressed: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => AIRecipeSelectionScreen(
-                                              predictedNames: _currentDishResult!.predictedNames!,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                      icon: const Icon(Icons.auto_awesome, color: Colors.white),
-                                      label: const Text('สร้างสูตรอาหารใหม่ผ่าน AI ✨'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppTheme.brandPurple,
-                                        foregroundColor: Colors.white,
-                                        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.scale)),
-                                      ),
-                                    ),
+                                    _buildAINewRecipeSection(hasRecipes: false),
                                   ],
                               ],
                             ),
@@ -548,6 +530,52 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
             ),
         ],
       ),
+    );
+  }
+
+  Widget _buildAINewRecipeSection({bool hasRecipes = false}) {
+    return Column(
+      children: [
+        if (hasRecipes) ...[
+          const Divider(height: 32),
+          Text(
+            'ไม่ถูกใจสูตรอาหารเหล่านี้? ลองถาม AI ดูสิ! ✨',
+            style: TextStyle(
+              fontSize: 15.sp,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.brandPurple.withOpacity(0.8),
+            ),
+          ),
+          SizedBox(height: 12.h),
+        ] else ...[
+          Text(
+            'แต่เราพบเมนูที่ใกล้เคียงจาก AI!',
+            style: TextStyle(fontSize: 14.sp, color: AppTheme.brandPurple),
+          ),
+          SizedBox(height: 12.h),
+        ],
+        ElevatedButton.icon(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AIRecipeSelectionScreen(
+                  predictedNames: _currentDishResult!.predictedNames!,
+                ),
+              ),
+            );
+          },
+          icon: const Icon(Icons.auto_awesome, color: Colors.white),
+          label: const Text('สร้างสูตรอาหารใหม่ผ่าน AI ✨'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.brandPurple,
+            foregroundColor: Colors.white,
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.scale)),
+            elevation: 2,
+          ),
+        ),
+      ],
     );
   }
 }

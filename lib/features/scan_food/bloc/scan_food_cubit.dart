@@ -71,14 +71,33 @@ class ScanFoodCubit extends Cubit<ScanFoodState> {
   Future<void> generateAIRecipe(String recipeName) async {
     emit(ScanFoodLoading());
     try {
-      final recipes = await _recipeService.generateNewRecipeByAI(recipeName);
+      var recipes = await _recipeService.generateNewRecipeByAI(recipeName);
+      RecipeModel? recipeModel;
+
       if (recipes.isNotEmpty) {
-        var recipeModel = recipes.first;
-        
+        recipeModel = recipes.first;
+      } else {
+        // FALLBACK: If AI returned success but null/empty data, try to find the new stub manually
+        print('DEBUG: AI returned no data. Searching user created recipes for "$recipeName"...');
+        try {
+          final myRecipes = await _recipeService.getMyCreateRecipes();
+          // Find the newest recipe that matches the name
+          final matching = myRecipes.where((r) => r.recipeName.toLowerCase().trim() == recipeName.toLowerCase().trim()).toList();
+          if (matching.isNotEmpty) {
+             // getMyCreateRecipes is usually sorted by ID desc, so first is newest
+             recipeModel = matching.first;
+             print('DEBUG: Found matching stub! ID: ${recipeModel.recipeId}');
+          }
+        } catch (e) {
+          print('DEBUG: Fallback search failed: $e');
+        }
+      }
+
+      if (recipeModel != null) {
         // Fallback: If AI returns an existing recipe ID but no ingredients/steps, fetch them!
         if (recipeModel.recipeId > 0 && 
            (recipeModel.ingredients == null || recipeModel.ingredients!.isEmpty)) {
-          print('DEBUG: AI returned truncated recipe (ID: ${recipeModel.recipeId}). Fetching full details...');
+          print('DEBUG: Recipe (ID: ${recipeModel.recipeId}) has no ingredients. Fetching full details...');
           try {
             final fullRecipe = await _recipeService.getRecipeDetailById(recipeModel.recipeId);
             recipeModel = fullRecipe;
@@ -87,21 +106,20 @@ class ScanFoodCubit extends Cubit<ScanFoodState> {
           }
         }
 
-        // IMPORTANT: Reset ID to 0 so AddFoodScreen treats this as a NEW recipe creation
-        recipeModel = recipeModel.copyWith(recipeId: 0);
-
+        // IMPORTANT: We MUST leave the recipeId as is so AddFoodScreen can update the stub record
+        
         emit(ScanFoodSuccess(
-          ingredients: recipeModel.ingredients?.map((e) => e.ingredientName).toList() ?? [],
+          ingredients: recipeModel?.ingredients?.map((e) => e.ingredientName).toList() ?? [],
           recipeModel: recipeModel,
           dishResponse: DishAIResponse(
             top3: [DishPrediction(className: recipeName, confidence: 1.0)],
             recipes: [], 
-            ingredients: recipeModel.ingredients?.map((e) => e.ingredientName).toList() ?? [],
-            tags: recipeModel.tagDetails ?? [],
+            ingredients: recipeModel?.ingredients?.map((e) => e.ingredientName).toList() ?? [],
+            tags: recipeModel?.tagDetails ?? [],
           ),
         ));
       } else {
-        emit(const ScanFoodError('ไม่สามารถสร้างสูตรอาหารได้'));
+        emit(const ScanFoodError('ไม่สามารถสร้างสูตรอาหารได้ (หาข้อมูลไม่พบ)'));
       }
     } catch (e) {
       emit(ScanFoodError('Error: ${e.toString()}'));

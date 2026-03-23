@@ -234,16 +234,41 @@ class RecipeRepository {
     return _recipeService.getRecipeFilterOption();
   }
 
-  Future<List<Recipe>> searchWithFilter({
+  Future<Map<String, List<Recipe>>> searchWithFilter({
     List<int>? categoryIds,
     List<int>? tagIds,
   }) async {
     try {
-      final apiRecipes = await _recipeService.getSearchRecipeFilterOption(
+      final result = await _recipeService.getSearchRecipeFilterOption(
         categoryIds: categoryIds,
         tagIds: tagIds,
       );
-      return _mapRecipes(apiRecipes);
+
+      if (result is Map<String, dynamic>) {
+        final recipesData = result['recipes'] as List<dynamic>? ?? [];
+        final genZData = result['gen_z_recipes'] as List<dynamic>? ?? [];
+
+        final List<RecipeModel> apiRecipes = recipesData
+            .map((json) => RecipeModel.fromJson(json as Map<String, dynamic>))
+            .toList();
+        final List<RecipeModel> apiGenZ = genZData
+            .map((json) => RecipeModel.fromJson(json as Map<String, dynamic>))
+            .toList();
+
+        return {
+          'recipes': _mapRecipes(apiRecipes),
+          'gen_z_recipes': _mapRecipes(apiGenZ),
+        };
+      } else if (result is List<RecipeModel>) {
+        return {
+          'recipes': _mapRecipes(result),
+          'gen_z_recipes': [],
+        };
+      }
+      return {
+        'recipes': [],
+        'gen_z_recipes': [],
+      };
     } catch (e) {
       throw Exception('Error searching with filter: $e');
     }

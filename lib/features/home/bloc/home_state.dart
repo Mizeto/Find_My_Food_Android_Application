@@ -13,6 +13,7 @@ class HomeLoaded extends HomeState {
   final List<Recipe> recipes;
   final List<Recipe> recommendedForYou;
   final List<Recipe> recommendedFromStock;
+  final List<Recipe> recommendedGenZ; // ✅ New: Gen Z Recommendations
   final List<Map<String, dynamic>> categories;
   final int? selectedCategoryId;
   final List<int> selectedFilterCategoryIds;
@@ -23,6 +24,7 @@ class HomeLoaded extends HomeState {
     required this.recipes,
     this.recommendedForYou = const [],
     this.recommendedFromStock = const [],
+    this.recommendedGenZ = const [],
     this.categories = const [],
     this.selectedCategoryId,
     this.selectedFilterCategoryIds = const [],
@@ -35,6 +37,7 @@ class HomeLoaded extends HomeState {
     recipes, 
     recommendedForYou, 
     recommendedFromStock, 
+    recommendedGenZ,
     categories, 
     selectedCategoryId ?? -1,
     selectedFilterCategoryIds,
@@ -46,6 +49,7 @@ class HomeLoaded extends HomeState {
     List<Recipe>? recipes,
     List<Recipe>? recommendedForYou,
     List<Recipe>? recommendedFromStock,
+    List<Recipe>? recommendedGenZ,
     List<Map<String, dynamic>>? categories,
     int? Function()? selectedCategoryId,
     List<int>? selectedFilterCategoryIds,
@@ -56,6 +60,7 @@ class HomeLoaded extends HomeState {
       recipes: recipes ?? this.recipes,
       recommendedForYou: recommendedForYou ?? this.recommendedForYou,
       recommendedFromStock: recommendedFromStock ?? this.recommendedFromStock,
+      recommendedGenZ: recommendedGenZ ?? this.recommendedGenZ,
       categories: categories ?? this.categories,
       selectedCategoryId: selectedCategoryId != null 
           ? selectedCategoryId() 

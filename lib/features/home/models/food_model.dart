@@ -96,10 +96,10 @@ class RecipeModel {
       return null;
     }
 
-    final ingredientsRaw = _findValue(['ingredients', 'recipe_ingredients', 'ingredient_list', 'items', 'components', 'recipe_ingredient']);
-    final stepsRaw = _findValue(['steps', 'recipe_steps', 'instructions', 'method', 'directions', 'step_list', 'recipe_step']);
-    final catsRaw = _findValue(['categories', 'category', 'category_details', 'dish_type', 'type']);
-    final tagsRaw = _findValue(['tags', 'tag_list', 'tag_details', 'keywords']);
+    final ingredientsRaw = _findValue(['ingredients', 'recipe_ingredients', 'ingredient_list', 'items', 'components', 'recipe_ingredient', 'วัตถุดิบ', 'ส่วนผสม']);
+    final stepsRaw = _findValue(['steps', 'recipe_steps', 'instructions', 'method', 'directions', 'step_list', 'recipe_step', 'วิธีทำ', 'ขั้นตอน', 'ขั้นตอนการทำ']);
+    final catsRaw = _findValue(['categories', 'category', 'category_details', 'dish_type', 'type', 'หมวดหมู่', 'ประเภทวอาหาร']);
+    final tagsRaw = _findValue(['tags', 'tag_list', 'tag_details', 'keywords', 'แท็ก', 'ป้ายกำกับ']);
 
     print('DEBUG: RecipeModel.fromJson - Parsing "${json['recipe_name'] ?? json['name']}"');
     print('DEBUG: Found ingredients: ${ingredientsRaw is List ? (ingredientsRaw as List).length : (ingredientsRaw != null ? 1 : 0)}');
@@ -131,14 +131,14 @@ class RecipeModel {
     }
 
     return RecipeModel(
-      recipeId: json['recipe_id'] ?? 0,
-      recipeName: json['recipe_name'] ?? json['name'] ?? json['title'] ?? json['label'] ?? '',
-      description: json['description']?.toString() ?? '',
-      cookingTimeMin: _parseToInt(json['cooking_time_min'] ?? json['cooking_time'] ?? json['time'] ?? json['prep_time']),
-      imageUrl: json['image_url'] ?? '',
+      recipeId: json['recipe_id'] ?? json['id'] ?? 0,
+      recipeName: json['recipe_name'] ?? json['name'] ?? json['title'] ?? json['label'] ?? json['ชื่อเมนู'] ?? json['ชื่ออาหาร'] ?? '',
+      description: json['description']?.toString() ?? json['คำอธิบาย']?.toString() ?? json['รายละเอียด']?.toString() ?? '',
+      cookingTimeMin: _parseToInt(json['cooking_time_min'] ?? json['cooking_time'] ?? json['time'] ?? json['prep_time'] ?? json['เวลาที่ใช้'] ?? json['เวลาปรุง']),
+      imageUrl: json['image_url'] ?? json['image'] ?? '',
       username: json['username'] ?? '',
       createDate: json['create_date']?.toString(),
-      likeCount: _parseToInt(json['like_count']),
+      likeCount: _parseToInt(json['like_count'] ?? json['likes']),
       isLiked: json['is_liked'] == true,
       isPublic: json['is_public'] == true,
       isActive: json['is_active'] == true,

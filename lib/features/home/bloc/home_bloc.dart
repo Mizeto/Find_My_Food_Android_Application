@@ -143,12 +143,13 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
       emit(HomeLoading());
       try {
-        final recipes = await repository.searchWithFilter(
+        final results = await repository.searchWithFilter(
           categoryIds: event.categoryIds,
           tagIds: event.tagIds,
         );
         emit(HomeLoaded(
-          recipes: recipes,
+          recipes: results['recipes'] ?? [],
+          recommendedGenZ: results['gen_z_recipes'] ?? [],
           categories: prevCategories,
           recommendedForYou: prevRecommendedForYou,
           recommendedFromStock: prevRecommendedFromStock,
