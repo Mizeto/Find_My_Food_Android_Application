@@ -412,6 +412,11 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
                                   color: isDarkMode ? Colors.white : AppTheme.brandPurple,
                                 ),
                               ),
+                              // New: Show only chips after header if we have predictions
+                              if (_currentDishResult?.predictedNames != null && _currentDishResult!.predictedNames!.isNotEmpty) ...[
+                                SizedBox(height: 12.h),
+                                _buildAIDishChips(),
+                              ],
                               SizedBox(height: 16.h),
                               ..._currentDishResult!.recipes!.asMap().entries.map((entry) {
                                 final index = entry.key;
@@ -427,10 +432,10 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
                                 );
                               }).toList(),
                               
-                              // New: AI Selection for unsatisfied users
+                              // New: AI Selection for unsatisfied users at the bottom
                               if (_currentDishResult?.predictedNames != null && _currentDishResult!.predictedNames!.isNotEmpty) ...[
-                                SizedBox(height: 12.h),
-                                _buildAINewRecipeSection(hasRecipes: true),
+                                SizedBox(height: 16.h),
+                                _buildAIButtonSection(hasRecipes: true),
                               ],
                             ],
                           ),
@@ -458,7 +463,7 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
                                   ),
                                   if (_currentDishResult?.predictedNames != null && _currentDishResult!.predictedNames!.isNotEmpty) ...[
                                     SizedBox(height: 24.h),
-                                    _buildAINewRecipeSection(hasRecipes: false),
+                                    _buildAIButtonSection(hasRecipes: false),
                                   ],
                               ],
                             ),
@@ -533,34 +538,88 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
     );
   }
 
-  Widget _buildAINewRecipeSection({bool hasRecipes = false}) {
+  Widget _buildAIDishChips() {
+    final predictedNames = _currentDishResult?.predictedNames ?? [];
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    if (predictedNames.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      children: [
+        Wrap(
+          spacing: 8.w,
+          runSpacing: 8.h,
+          alignment: WrapAlignment.center,
+          children: predictedNames.take(3).map((name) {
+            return GestureDetector(
+              onTap: () {
+                 Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => AIRecipeSelectionScreen(
+                      predictedNames: predictedNames,
+                    ),
+                  ),
+                );
+              },
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
+                decoration: BoxDecoration(
+                  color: AppTheme.brandPurple.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20.scale),
+                  border: Border.all(color: AppTheme.brandPurple.withOpacity(0.3)),
+                ),
+                child: Text(
+                  name,
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    color: isDarkMode ? Colors.white : AppTheme.brandPurple,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAIButtonSection({bool hasRecipes = false}) {
+    final predictedNames = _currentDishResult?.predictedNames ?? [];
+
     return Column(
       children: [
         if (hasRecipes) ...[
           const Divider(height: 32),
           Text(
-            'ไม่ถูกใจสูตรอาหารเหล่านี้? ลองถาม AI ดูสิ! ✨',
+            'ไม่ถูกใจสูตรอาหารเหล่านี้? ลองใช้ AI ค้นหาดูสิ! ✨',
             style: TextStyle(
               fontSize: 15.sp,
               fontWeight: FontWeight.w600,
-              color: AppTheme.brandPurple.withOpacity(0.8),
+              color: AppTheme.brandPurple,
             ),
           ),
-          SizedBox(height: 12.h),
         ] else ...[
           Text(
             'แต่เราพบเมนูที่ใกล้เคียงจาก AI!',
-            style: TextStyle(fontSize: 14.sp, color: AppTheme.brandPurple),
+            style: TextStyle(
+              fontSize: 15.sp,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.brandPurple,
+            ),
           ),
           SizedBox(height: 12.h),
+          _buildAIDishChips(),
         ],
+        SizedBox(height: 16.h),
         ElevatedButton.icon(
           onPressed: () {
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => AIRecipeSelectionScreen(
-                  predictedNames: _currentDishResult!.predictedNames!,
+                  predictedNames: predictedNames,
                 ),
               ),
             );
@@ -570,9 +629,10 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
           style: ElevatedButton.styleFrom(
             backgroundColor: AppTheme.brandPurple,
             foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.scale)),
-            elevation: 2,
+            padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 14.h),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15.scale)),
+            elevation: 3,
+            shadowColor: AppTheme.brandPurple.withOpacity(0.4),
           ),
         ),
       ],

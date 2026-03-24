@@ -33,7 +33,7 @@ class _ScanFoodViewState extends State<_ScanFoodView> {
   File? _image;
   final ImagePicker _picker = ImagePicker();
   bool _isDishMode = true; // Default to Dish Prediction
-  bool _forceSearch = true; // Default to Force Search
+  bool _forceSearch = false; // Default to Normal Search
 
   Future<void> _pickImage(BuildContext context, ImageSource source) async {
     final isGuest = context.read<AuthCubit>().isGuest;

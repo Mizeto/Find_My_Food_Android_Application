@@ -22,13 +22,26 @@ class AIRecipeSelectionScreen extends StatefulWidget {
 
 class _AIRecipeSelectionScreenState extends State<AIRecipeSelectionScreen> {
   String? _selectedName;
+  final TextEditingController _customNameController = TextEditingController();
+  final TextEditingController _customPromptController = TextEditingController();
+  bool _isCustomMode = false;
 
   @override
   void initState() {
     super.initState();
     if (widget.predictedNames.isNotEmpty) {
       _selectedName = widget.predictedNames.first;
+    } else {
+      _isCustomMode = true;
+      _selectedName = 'custom';
     }
+  }
+
+  @override
+  void dispose() {
+    _customNameController.dispose();
+    _customPromptController.dispose();
+    super.dispose();
   }
 
   @override
@@ -106,42 +119,81 @@ class _AIRecipeSelectionScreenState extends State<AIRecipeSelectionScreen> {
                   SizedBox(height: 24.h),
                   Expanded(
                     child: ListView.builder(
-                      itemCount: widget.predictedNames.length,
+                      itemCount: widget.predictedNames.length + 1,
                       itemBuilder: (context, index) {
-                        final name = widget.predictedNames[index];
-                        final isSelected = _selectedName == name;
+                        final bool isOther = index == widget.predictedNames.length;
+                        final name = isOther ? 'เมนูอื่นๆ...' : widget.predictedNames[index];
+                        final isSelected = isOther ? _isCustomMode : (_selectedName == name && !_isCustomMode);
 
-                        return GestureDetector(
-                          onTap: () => setState(() => _selectedName = name),
-                          child: Container(
-                            margin: EdgeInsets.only(bottom: 12.h),
-                            padding: EdgeInsets.all(16.scale),
-                            decoration: BoxDecoration(
-                              color: isSelected ? AppTheme.brandPurple.withOpacity(0.1) : Colors.white,
-                              borderRadius: BorderRadius.circular(15.scale),
-                              border: Border.all(
-                                color: isSelected ? AppTheme.brandPurple : Colors.grey[300]!,
-                                width: 2,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  isSelected ? Icons.check_circle : Icons.circle_outlined,
-                                  color: isSelected ? AppTheme.brandPurple : Colors.grey,
-                                ),
-                                SizedBox(width: 16.w),
-                                Text(
-                                  name,
-                                  style: TextStyle(
-                                    fontSize: 16.sp,
-                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                    color: isSelected ? AppTheme.brandPurple : Colors.black87,
+                        return Column(
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  if (isOther) {
+                                    _isCustomMode = true;
+                                    _selectedName = 'custom';
+                                  } else {
+                                    _isCustomMode = false;
+                                    _selectedName = name;
+                                  }
+                                });
+                              },
+                              child: Container(
+                                margin: EdgeInsets.only(bottom: 12.h),
+                                padding: EdgeInsets.all(16.scale),
+                                decoration: BoxDecoration(
+                                  color: isSelected ? AppTheme.brandPurple.withOpacity(0.1) : Colors.white,
+                                  borderRadius: BorderRadius.circular(15.scale),
+                                  border: Border.all(
+                                    color: isSelected ? AppTheme.brandPurple : Colors.grey[300]!,
+                                    width: 2,
                                   ),
                                 ),
-                              ],
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      isSelected ? Icons.check_circle : Icons.circle_outlined,
+                                      color: isSelected ? AppTheme.brandPurple : Colors.grey,
+                                    ),
+                                    SizedBox(width: 16.w),
+                                    Text(
+                                      name,
+                                      style: TextStyle(
+                                        fontSize: 16.sp,
+                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                        color: isSelected ? AppTheme.brandPurple : Colors.black87,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
-                          ),
+                            if (isOther && _isCustomMode) ...[
+                              Padding(
+                                padding: EdgeInsets.symmetric(vertical: 8.h),
+                                child: Column(
+                                  children: [
+                                    _buildCustomInputField(
+                                      controller: _customNameController,
+                                      label: 'ชื่อเมนูอาหาร',
+                                      hint: 'ตัวอย่าง: กะเพราไข่ดาวพรีเมียม',
+                                      icon: Icons.restaurant_menu,
+                                    ),
+                                    SizedBox(height: 12.h),
+                                    _buildCustomInputField(
+                                      controller: _customPromptController,
+                                      label: 'รายละเอียดเพิ่มเติม (Prompt)',
+                                      hint: 'ตัวอย่าง: ขอแบบเผ็ดน้อย ใส่กะเพราเยอะๆ...',
+                                      icon: Icons.edit_note,
+                                      maxLines: 3,
+                                    ),
+                                    SizedBox(height: 16.h),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
                         );
                       },
                     ),
@@ -151,10 +203,17 @@ class _AIRecipeSelectionScreenState extends State<AIRecipeSelectionScreen> {
                     width: double.infinity,
                     height: 55.h,
                     child: ElevatedButton(
-                      onPressed: (isLoading || _selectedName == null)
+                      onPressed: (isLoading || _selectedName == null || (_isCustomMode && _customNameController.text.isEmpty))
                           ? null
                           : () {
-                              context.read<ScanFoodCubit>().generateAIRecipe(_selectedName!);
+                              if (_isCustomMode) {
+                                context.read<ScanFoodCubit>().generateAIRecipe(
+                                  _customNameController.text.trim(),
+                                  prompt: _customPromptController.text.trim(),
+                                );
+                              } else {
+                                context.read<ScanFoodCubit>().generateAIRecipe(_selectedName!);
+                              }
                             },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.brandPurple,
@@ -187,6 +246,43 @@ class _AIRecipeSelectionScreenState extends State<AIRecipeSelectionScreen> {
           },
         ),
       ),
+    );
+  }
+
+  Widget _buildCustomInputField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    int maxLines = 1,
+  }) {
+    return TextFormField(
+      controller: controller,
+      maxLines: maxLines,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        prefixIcon: Icon(icon, color: AppTheme.brandPurple),
+        labelStyle: TextStyle(color: AppTheme.brandPurple, fontSize: 14.sp),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.scale),
+          borderSide: BorderSide(color: AppTheme.brandPurple.withOpacity(0.5)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.scale),
+          borderSide: const BorderSide(color: AppTheme.brandPurple, width: 2),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.scale),
+          borderSide: BorderSide(color: Colors.grey[300]!),
+        ),
+        filled: true,
+        fillColor: Colors.grey[50],
+      ),
+      onChanged: (val) {
+        // Trigger rebuild to update button state
+        setState(() {});
+      },
     );
   }
 }

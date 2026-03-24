@@ -68,10 +68,10 @@ class ScanFoodCubit extends Cubit<ScanFoodState> {
     }
   }
 
-  Future<void> generateAIRecipe(String recipeName) async {
+  Future<void> generateAIRecipe(String recipeName, {String? prompt}) async {
     emit(ScanFoodLoading());
     try {
-      var recipes = await _recipeService.generateNewRecipeByAI(recipeName);
+      var recipes = await _recipeService.generateNewRecipeByAI(recipeName, prompt: prompt);
       RecipeModel? recipeModel;
 
       if (recipes.isNotEmpty) {
