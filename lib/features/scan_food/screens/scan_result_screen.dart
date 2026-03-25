@@ -544,44 +544,57 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
 
     if (predictedNames.isEmpty) return const SizedBox.shrink();
 
-    return Column(
-      children: [
-        Wrap(
-          spacing: 8.w,
-          runSpacing: 8.h,
-          alignment: WrapAlignment.center,
-          children: predictedNames.take(3).map((name) {
-            return GestureDetector(
-              onTap: () {
-                 Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => AIRecipeSelectionScreen(
-                      predictedNames: predictedNames,
-                    ),
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(horizontal: 16.w),
+      child: Wrap(
+        spacing: 12.w,
+        runSpacing: 10.h,
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: predictedNames.take(3).map((name) {
+          return GestureDetector(
+            onTap: () {
+               Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AIRecipeSelectionScreen(
+                    predictedNames: predictedNames,
                   ),
-                );
-              },
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
-                decoration: BoxDecoration(
-                  color: AppTheme.brandPurple.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20.scale),
-                  border: Border.all(color: AppTheme.brandPurple.withOpacity(0.3)),
                 ),
-                child: Text(
-                  name,
-                  style: TextStyle(
-                    fontSize: 13.sp,
-                    color: isDarkMode ? Colors.white : AppTheme.brandPurple,
-                    fontWeight: FontWeight.w600,
+              );
+            },
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+              decoration: BoxDecoration(
+                color: AppTheme.brandPurple.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(25.scale),
+                border: Border.all(
+                  color: AppTheme.brandPurple.withOpacity(0.2),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.brandPurple.withOpacity(0.05),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
                   ),
+                ],
+              ),
+              child: Text(
+                name,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13.sp,
+                  color: isDarkMode ? Colors.white : AppTheme.brandPurple,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.3,
                 ),
               ),
-            );
-          }).toList(),
-        ),
-      ],
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 
