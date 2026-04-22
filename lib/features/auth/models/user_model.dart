@@ -42,7 +42,7 @@ class UserModel extends Equatable {
         // Assume relative path from backend
         // Make sure it doesn't have double slashes
         String cleanPath = rawImage.startsWith('/') ? rawImage.substring(1) : rawImage;
-        normalizedImage = 'http://45.91.134.142/$cleanPath';
+        normalizedImage = 'http://43.229.132.119/$cleanPath';
       }
     }
 

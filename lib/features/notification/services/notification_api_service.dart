@@ -4,7 +4,7 @@ import '../../../data/models/notification_model.dart';
 import '../../auth/services/auth_service.dart';
 
 class NotificationApiService {
-  static const String baseUrl = 'http://45.91.134.142';
+  static const String baseUrl = 'http://43.229.132.119';
   final AuthService _authService = AuthService();
 
   Future<Map<String, String>> _getHeaders() async {

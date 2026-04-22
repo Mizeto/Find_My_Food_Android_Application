@@ -7,7 +7,7 @@ import '../../../data/models/recipe_model.dart';
 import '../models/food_model.dart';
 
 class RecipeService {
-  static final String baseUrl = 'http://45.91.134.142'; // Local server URL
+  static final String baseUrl = 'http://43.229.132.119'; // Local server URL
 
   // GET /recipe/getAllRecipe
   Future<List<RecipeModel>> getAllRecipes() async {

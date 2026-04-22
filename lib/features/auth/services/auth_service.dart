@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 
 class AuthService {
-  static const String baseUrl = 'http://45.91.134.142';
+  static const String baseUrl = 'http://43.229.132.119';
   static const String googleAuthBaseUrl = 'https://find-my-food-api.onrender.com';
   static const String _tokenKey = 'auth_token';
 
